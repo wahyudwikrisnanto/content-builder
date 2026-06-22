@@ -66,6 +66,15 @@ body {
 .icon-btn-active { background: var(--bg-active); color: var(--text-1); }
 .icon-btn-active:hover { background: var(--bg-active); }
 
+.migrate-btn {
+  display: flex; align-items: center; height: 28px; padding: 0 10px;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--bg-hover); color: var(--text-1);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  white-space: nowrap; transition: all 0.12s;
+}
+.migrate-btn:hover { background: var(--bg-active); }
+
 .icon-btn-sm {
   display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; border: none; background: none;
@@ -218,6 +227,19 @@ body {
   pointer-events: none;
 }
 
+.canvas-select-all-overlay {
+  position: absolute; inset: 0;
+  outline: 2px solid #3B82F6; outline-offset: -2px;
+  pointer-events: none; z-index: 9999;
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.canvas-select-all-overlay span {
+  background: #3B82F6; color: #fff;
+  font-size: 12px; font-weight: 500;
+  padding: 3px 10px; border-radius: 0 0 6px 6px;
+  pointer-events: none;
+}
+
 .canvas-el {
   position: absolute; cursor: move; transition: box-shadow 0.08s;
 }
@@ -233,6 +255,12 @@ body {
 .canvas-el.locked { cursor: default; }
 .canvas-el.preview { cursor: default; }
 .canvas-el.preview:hover { outline: none !important; }
+
+.canvas-marquee-fixed {
+  position: fixed; pointer-events: none; z-index: 9998;
+  border: 1.5px solid var(--selection);
+  background: color-mix(in srgb, var(--selection) 12%, transparent);
+}
 
 .resize-handle {
   position: absolute; width: 10px; height: 10px;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCms } from '../composables/useCms'
 import { CmsFactories } from '../composables/factories'
 import CanvasElement from './CanvasElement.vue'
@@ -11,6 +11,20 @@ const cms = useCms()
 const canvasRef = ref<HTMLDivElement | null>(null)
 const scrollRef = ref<HTMLDivElement | null>(null)
 const dragOver = ref(false)
+
+// Marquee in viewport (client) coords — rendered as position:fixed
+const marquee = ref<{ cx1: number; cy1: number; cx2: number; cy2: number } | null>(null)
+
+const marqueeStyle = computed(() => {
+  if (!marquee.value) return {}
+  const { cx1, cy1, cx2, cy2 } = marquee.value
+  return {
+    left: Math.min(cx1, cx2) + 'px',
+    top: Math.min(cy1, cy2) + 'px',
+    width: Math.abs(cx2 - cx1) + 'px',
+    height: Math.abs(cy2 - cy1) + 'px',
+  }
+})
 
 onMounted(() => {
   const el = scrollRef.value
@@ -52,15 +66,54 @@ function onDrop(e: DragEvent): void {
   }
 }
 
-function onCanvasClick(e: MouseEvent): void {
+function onScrollMouseDown(e: MouseEvent): void {
+  if (cms.state.preview) return
   const t = e.target as HTMLElement
-  if (t === canvasRef.value || t.classList.contains('canvas-inner')) cms.select(null)
+  const isScrollBg = t === scrollRef.value
+  const isCanvasBg = t === canvasRef.value || t.classList.contains('canvas-inner')
+  if (!isScrollBg && !isCanvasBg) return
+
+  cms.select(null)
+  cms.state.allSelected = false
+
+  const startCX = e.clientX, startCY = e.clientY
+  let dragging = false
+
+  const onMove = (ev: MouseEvent): void => {
+    dragging = true
+    marquee.value = { cx1: startCX, cy1: startCY, cx2: ev.clientX, cy2: ev.clientY }
+  }
+
+  const onUp = (): void => {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+    if (dragging && marquee.value && canvasRef.value) {
+      const { cx1, cy1, cx2, cy2 } = marquee.value
+      const canvasRect = canvasRef.value.getBoundingClientRect()
+      const z = cms.state.zoom
+      const rx1 = (Math.min(cx1, cx2) - canvasRect.left) / z
+      const ry1 = (Math.min(cy1, cy2) - canvasRect.top) / z
+      const rx2 = (Math.max(cx1, cx2) - canvasRect.left) / z
+      const ry2 = (Math.max(cy1, cy2) - canvasRect.top) / z
+      const hits = cms.state.elements.filter(el => {
+        if (!cms.isEffectivelyVisible(el.id)) return false
+        return el.x < rx2 && el.x + el.width > rx1 &&
+               el.y < ry2 && el.y + el.height > ry1
+      }).map(el => el.id)
+      if (hits.length > 1) cms.setSelectedIds(hits)
+      else if (hits.length === 1) cms.select(hits[0])
+    }
+    marquee.value = null
+  }
+
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
 }
 </script>
 
 <template>
   <div class="workspace">
-    <div class="canvas-scroll" ref="scrollRef">
+    <div class="canvas-scroll" ref="scrollRef" @mousedown="onScrollMouseDown">
       <div class="canvas-wrapper"
         :style="{ width: cms.state.canvasWidth * cms.state.zoom + 'px',
                   height: cms.effectiveHeight.value * cms.state.zoom + 'px' }">
@@ -71,7 +124,6 @@ function onCanvasClick(e: MouseEvent): void {
                     height: cms.effectiveHeight.value + 'px',
                     transform: `scale(${cms.state.zoom})`,
                     transformOrigin: 'top left' }"
-          @click="onCanvasClick"
           @dragover.prevent="dragOver = true"
           @dragleave="dragOver = false"
           @drop="onDrop"
@@ -80,11 +132,15 @@ function onCanvasClick(e: MouseEvent): void {
 
           <template v-for="el in cms.state.elements" :key="el.id">
             <CanvasElement v-if="cms.isEffectivelyVisible(el.id)" :element="el"
-              :is-selected="el.id === cms.state.selectedId"
+              :is-selected="el.id === cms.state.selectedId || cms.state.selectedIds.includes(el.id)"
               :is-editing="el.id === cms.state.editingTextId" />
           </template>
 
           <Guides />
+
+          <div v-if="cms.state.allSelected" class="canvas-select-all-overlay">
+            <span>All selected — press Delete to clear</span>
+          </div>
 
           <div v-if="!cms.state.elements.length && !dragOver" class="canvas-empty">
             <Icon name="move" :size="32" :style="{ opacity: 0.2 }" />
@@ -93,5 +149,8 @@ function onCanvasClick(e: MouseEvent): void {
         </div>
       </div>
     </div>
+
+    <!-- Marquee rendered fixed over entire viewport -->
+    <div v-if="marquee" class="canvas-marquee-fixed" :style="marqueeStyle" />
   </div>
 </template>

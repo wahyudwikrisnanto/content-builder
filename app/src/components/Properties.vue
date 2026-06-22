@@ -71,7 +71,19 @@ const headerLabel = computed(() => {
 </script>
 
 <template>
-  <div v-if="!sel" class="properties">
+  <div v-if="cms.state.selectedIds.length" class="properties">
+    <div class="properties-header">
+      <span>{{ cms.state.selectedIds.length }} selected</span>
+      <div :style="{ display: 'flex', gap: '2px', marginLeft: 'auto' }">
+        <button class="icon-btn" title="Delete selected" @click="cms.deleteSelected()">
+          <Icon name="trash" :size="15" />
+        </button>
+      </div>
+    </div>
+    <div class="prop-hint">Press Delete to remove all selected elements</div>
+  </div>
+
+  <div v-else-if="!sel" class="properties">
     <div class="properties-header"><span>Canvas</span></div>
     <div class="prop-section">
       <div class="prop-section-title">Size</div>
@@ -106,7 +118,7 @@ const headerLabel = computed(() => {
         <button class="icon-btn" title="Duplicate (Ctrl+D)" @click="cms.duplicate(sel.id)">
           <Icon name="copy" :size="15" />
         </button>
-        <button class="icon-btn" title="Delete" @click="cms.deleteElement(sel.id)">
+<button class="icon-btn" title="Delete" @click="cms.deleteElement(sel.id)">
           <Icon name="trash" :size="15" />
         </button>
       </div>

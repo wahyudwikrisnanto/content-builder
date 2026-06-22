@@ -66,7 +66,9 @@ export interface Guide {
 export interface CmsState {
   elements: CmsElement[]
   selectedId: string | null
+  selectedIds: string[]
   editingTextId: string | null
+  allSelected: boolean
   canvasWidth: number
   canvasHeight: number
   zoom: number

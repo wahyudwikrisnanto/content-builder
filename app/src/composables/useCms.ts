@@ -10,7 +10,9 @@ const HISTORY_MAX = 49
 const state = reactive<CmsState>({
   elements: [],
   selectedId: null,
+  selectedIds: [],
   editingTextId: null,
+  allSelected: false,
   canvasWidth: 800,
   canvasHeight: 1100,
   zoom: 1,
@@ -76,8 +78,42 @@ const actions = {
     state.elements = state.elements.filter(e => !kill.has(e.id))
     if (state.selectedId && kill.has(state.selectedId)) state.selectedId = null
     if (state.editingTextId && kill.has(state.editingTextId)) state.editingTextId = null
+    state.allSelected = false
+    state.selectedIds = state.selectedIds.filter(id => !kill.has(id))
   },
-  select(id: string | null): void { state.selectedId = id; state.editingTextId = null },
+  select(id: string | null): void { state.selectedId = id; state.editingTextId = null; state.allSelected = false; state.selectedIds = [] },
+  setSelectedIds(ids: string[]): void {
+    state.selectedIds = ids
+    state.selectedId = null
+    state.editingTextId = null
+    state.allSelected = false
+  },
+  deleteSelected(): void {
+    if (!state.selectedIds.length) return
+    snapshot()
+    const kill = new Set<string>(state.selectedIds.flatMap(id => [id, ...collectDescendantIds(id, state.elements)]))
+    state.elements = state.elements.filter(e => !kill.has(e.id))
+    state.selectedIds = []
+    state.selectedId = null
+    state.editingTextId = null
+    state.guides = []
+  },
+  selectAll(): void {
+    if (!state.elements.length) return
+    state.allSelected = true
+    state.selectedId = null
+    state.editingTextId = null
+  },
+  deleteAll(): void {
+    if (!state.elements.length) return
+    snapshot()
+    state.elements = []
+    state.selectedId = null
+    state.selectedIds = []
+    state.editingTextId = null
+    state.allSelected = false
+    state.guides = []
+  },
   setEditing(id: string | null): void { state.editingTextId = id },
   move(id: string, x: number, y: number): void {
     const i = findIdx(id); if (i < 0) return
@@ -313,14 +349,14 @@ const actions = {
     const prev = state.history.pop()!
     state.future.unshift(cloneEl(state.elements))
     state.elements = prev
-    state.selectedId = null; state.editingTextId = null
+    state.selectedId = null; state.selectedIds = []; state.editingTextId = null
   },
   redo(): void {
     if (!state.future.length) return
     const next = state.future.shift()!
     state.history.push(cloneEl(state.elements))
     state.elements = next
-    state.selectedId = null; state.editingTextId = null
+    state.selectedId = null; state.selectedIds = []; state.editingTextId = null
   },
 }
 

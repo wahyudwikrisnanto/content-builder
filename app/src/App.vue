@@ -24,14 +24,19 @@ function onKey(e: KeyboardEvent): void {
     if (e.key === 'Escape' && isCE) (document.activeElement as HTMLElement | null)?.blur()
     return
   }
+  if (e.key === 'a' && mod) {
+    e.preventDefault(); cms.selectAll(); return
+  }
   if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (cms.state.allSelected) { e.preventDefault(); cms.deleteAll(); return }
+    if (cms.state.selectedIds.length) { e.preventDefault(); cms.deleteSelected(); return }
     if (cms.state.selectedId) { e.preventDefault(); cms.deleteElement(cms.state.selectedId) }
   }
   if (e.key === 'Escape') {
     if (cms.state.previewFullscreen) cms.togglePreviewFullscreen()
     else if (cms.state.preview) cms.togglePreview()
     else if (cms.state.fullscreen) cms.toggleFullscreen()
-    else cms.select(null)
+    else { cms.select(null); cms.state.allSelected = false; cms.state.selectedIds = [] }
   }
   if (e.key === 'd' && mod) {
     if (cms.state.selectedId) { e.preventDefault(); cms.duplicate(cms.state.selectedId) }
