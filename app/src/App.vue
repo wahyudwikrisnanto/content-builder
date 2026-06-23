@@ -1,64 +1,45 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { useCms } from './composables/useCms'
-import { useModifierKeys } from './composables/useModifierKeys'
-import Toolbar from './components/Toolbar.vue'
-import Sidebar from './components/Sidebar.vue'
-import Canvas from './components/Canvas.vue'
-import Properties from './components/Properties.vue'
-import PreviewView from './components/PreviewView.vue'
+import { ref, useTemplateRef } from 'vue'
+import ContentBuilder from './ContentBuilder.vue'
+import './style.css'
 
-const cms = useCms()
-useModifierKeys()
+const SAMPLE_HTML = `
+<h1>Welcome to Our Platform</h1>
+<p>This is a <strong>sample article</strong> migrated from CKEditor. It includes a variety of block types to demonstrate the canvas migration.</p>
+<h2>Key Features</h2>
+<ul>
+  <li>Rich text editing with headings and paragraphs</li>
+  <li>Ordered and unordered lists</li>
+  <li>Images and media embeds</li>
+  <li>Code blocks with syntax highlighting</li>
+</ul>
+<h3>Getting Started</h3>
+<p>Follow the steps below to set up your environment. The process is straightforward and takes only a few minutes.</p>
+<ol>
+  <li>Install the dependencies using your package manager</li>
+  <li>Configure the environment variables</li>
+  <li>Run the development server</li>
+</ol>
+<h2>Code Example</h2>
+<pre><code class="language-javascript">import { createApp } from 'vue'
+import App from './App.vue'
 
-function onKey(e: KeyboardEvent): void {
-  const tag = document.activeElement?.tagName
-  const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
-  const isCE = (document.activeElement as HTMLElement | null)?.contentEditable === 'true'
-  const mod = e.ctrlKey || e.metaKey
+const app = createApp(App)
+app.mount('#app')</code></pre>
+<h2>About</h2>
+<p>This content was originally authored in CKEditor 5 and is now being migrated to the canvas-based layout builder.</p>
+<hr>
+<p>For questions, visit our documentation or contact support.</p>
+`
 
-  if (e.key === 'z' && mod && !e.shiftKey) { e.preventDefault(); cms.undo(); return }
-  if ((e.key === 'z' && mod && e.shiftKey) || (e.key === 'y' && mod)) { e.preventDefault(); cms.redo(); return }
+const builder = useTemplateRef('builder')
+const json = ref('')
 
-  if (isInput || isCE) {
-    if (e.key === 'Escape' && isCE) (document.activeElement as HTMLElement | null)?.blur()
-    return
-  }
-  if (e.key === 'a' && mod) {
-    e.preventDefault(); cms.selectAll(); return
-  }
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (cms.state.allSelected) { e.preventDefault(); cms.deleteAll(); return }
-    if (cms.state.selectedIds.length) { e.preventDefault(); cms.deleteSelected(); return }
-    if (cms.state.selectedId) { e.preventDefault(); cms.deleteElement(cms.state.selectedId) }
-  }
-  if (e.key === 'Escape') {
-    if (cms.state.previewFullscreen) cms.togglePreviewFullscreen()
-    else if (cms.state.preview) cms.togglePreview()
-    else if (cms.state.fullscreen) cms.toggleFullscreen()
-    else { cms.select(null); cms.state.allSelected = false; cms.state.selectedIds = [] }
-  }
-  if (e.key === 'd' && mod) {
-    if (cms.state.selectedId) { e.preventDefault(); cms.duplicate(cms.state.selectedId) }
-  }
+function onMounted() {
+  json.value = builder.value!.htmlToJson(SAMPLE_HTML)
 }
-
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div :class="['app', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]">
-    <Toolbar v-if="!cms.state.preview || !cms.state.previewFullscreen" />
-    <div class="main-area">
-      <template v-if="cms.state.preview">
-        <PreviewView />
-      </template>
-      <template v-else>
-        <Sidebar v-if="!cms.state.fullscreen" />
-        <Canvas />
-        <Properties v-if="!cms.state.fullscreen" />
-      </template>
-    </div>
-  </div>
+  <ContentBuilder ref="builder" v-model="json" @vue:mounted="onMounted" />
 </template>
