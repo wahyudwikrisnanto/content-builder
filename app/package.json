@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "vue-tsc -b && vite build"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
