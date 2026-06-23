@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch, onMounted, onUnmounted } from 'vue'
+import './style.css'
 import { useCms } from './composables/useCms'
 import { useModifierKeys } from './composables/useModifierKeys'
 import { parseCKEditorHtml } from './composables/importCKEditor'
@@ -110,7 +111,7 @@ function onKey(e: KeyboardEvent): void {
 </script>
 
 <template>
-  <div :class="['app', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]">
+  <div :class="['cb-root', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]">
     <Toolbar v-if="!cms.state.preview || !cms.state.previewFullscreen" />
     <div class="main-area">
       <template v-if="cms.state.preview">

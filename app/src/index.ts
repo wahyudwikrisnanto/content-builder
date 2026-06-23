@@ -1,4 +1,7 @@
 export { default as ContentBuilder } from './ContentBuilder.vue'
+export { default as ContentRenderer } from './ContentRenderer.vue'
 export { parseCKEditorHtml } from './composables/importCKEditor'
+export { renderHtml, bindCopyButtons } from './composables/renderHtml'
 export type { CmsElement, CmsState, ElementType, ElementStyles } from './types'
 export type { ImportResult } from './composables/importCKEditor'
+export type { RenderPayload } from './composables/renderHtml'

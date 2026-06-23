@@ -2,6 +2,7 @@
 import { ref, useTemplateRef } from 'vue'
 import ContentBuilder from './ContentBuilder.vue'
 import './style.css'
+import './dev.css'
 
 const SAMPLE_HTML = `
 <h1>Welcome to Our Platform</h1>
