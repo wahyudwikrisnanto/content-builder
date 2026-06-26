@@ -2,11 +2,12 @@
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useCms } from '../composables/useCms'
-import { renderHtml, bindCopyButtons } from '../composables/renderHtml'
+import { renderHtml, renderFlowHtml, bindCopyButtons } from '../composables/renderHtml'
 import Icon from '../icons/Icon.vue'
 
 const cms = useCms()
 const stageRef = ref<HTMLElement | null>(null)
+const responsive = ref(false)
 let unbind: (() => void) | null = null
 
 onMounted(() => { if (stageRef.value) unbind = bindCopyButtons(stageRef.value) })
@@ -17,7 +18,7 @@ watch(() => cms.state.elements.length, async () => {
   if (stageRef.value) unbind = bindCopyButtons(stageRef.value)
 })
 
-const html = computed(() => renderHtml({
+const payload = computed(() => ({
   canvas: {
     width: cms.state.canvasWidth,
     height: cms.state.canvasHeight,
@@ -25,11 +26,24 @@ const html = computed(() => renderHtml({
   },
   elements: cms.state.elements,
 }))
+
+const html = computed(() =>
+  responsive.value
+    ? renderFlowHtml(payload.value)
+    : renderHtml(payload.value),
+)
 </script>
 
 <template>
   <div :class="['preview-view', { fullscreen: cms.state.previewFullscreen }]">
     <div class="preview-toolbar">
+      <button
+        :class="['icon-btn', { 'icon-btn-active': responsive }]"
+        title="Toggle responsive (flow) layout"
+        @click="responsive = !responsive"
+      >
+        <Icon name="responsive" :size="17" />
+      </button>
       <button class="icon-btn" @click="cms.togglePreviewFullscreen()"
         :title="cms.state.previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'">
         <Icon :name="cms.state.previewFullscreen ? 'minimize' : 'maximize'" :size="17" />
@@ -39,7 +53,12 @@ const html = computed(() => renderHtml({
       </button>
     </div>
     <div class="preview-scroll">
-      <div class="preview-stage" ref="stageRef" v-html="html"></div>
+      <div
+        class="preview-stage"
+        :class="{ 'preview-stage--flow': responsive }"
+        ref="stageRef"
+        v-html="html"
+      ></div>
     </div>
   </div>
 </template>
@@ -71,6 +90,11 @@ const html = computed(() => renderHtml({
 .preview-stage {
   flex-shrink: 0;
   box-shadow: var(--shadow-lg);
+}
+.preview-stage--flow {
+  width: 100%;
+  max-width: 100%;
+  box-shadow: none;
 }
 .preview-view.fullscreen .preview-scroll { padding: 0; }
 .preview-view.fullscreen .preview-stage { box-shadow: none; }

@@ -161,5 +161,27 @@ defineProps<{ name: string; size?: number }>()
       <polyline points="15,19 12,22 9,19"/><polyline points="19,9 22,12 19,15"/>
       <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
     </template>
+    <template v-else-if="name === 'align-left-edge'">
+      <line x1="4" y1="3" x2="4" y2="21"/><rect x="8" y="7" width="12" height="4" rx="1"/><rect x="8" y="13" width="8" height="4" rx="1"/>
+    </template>
+    <template v-else-if="name === 'align-center-h'">
+      <line x1="12" y1="3" x2="12" y2="21"/><rect x="4" y="7" width="16" height="4" rx="1"/><rect x="6" y="13" width="12" height="4" rx="1"/>
+    </template>
+    <template v-else-if="name === 'align-right-edge'">
+      <line x1="20" y1="3" x2="20" y2="21"/><rect x="4" y="7" width="12" height="4" rx="1"/><rect x="8" y="13" width="8" height="4" rx="1"/>
+    </template>
+    <template v-else-if="name === 'align-top-edge'">
+      <line x1="3" y1="4" x2="21" y2="4"/><rect x="7" y="8" width="4" height="12" rx="1"/><rect x="13" y="8" width="4" height="8" rx="1"/>
+    </template>
+    <template v-else-if="name === 'align-center-v'">
+      <line x1="3" y1="12" x2="21" y2="12"/><rect x="7" y="4" width="4" height="16" rx="1"/><rect x="13" y="6" width="4" height="12" rx="1"/>
+    </template>
+    <template v-else-if="name === 'align-bottom-edge'">
+      <line x1="3" y1="20" x2="21" y2="20"/><rect x="7" y="4" width="4" height="12" rx="1"/><rect x="13" y="8" width="4" height="8" rx="1"/>
+    </template>
+    <template v-else-if="name === 'responsive'">
+      <rect x="2" y="6" width="20" height="12" rx="2"/>
+      <line x1="2" y1="12" x2="22" y2="12" stroke-dasharray="3 2"/>
+    </template>
   </svg>
 </template>

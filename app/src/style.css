@@ -100,6 +100,14 @@
 }
 .cb-root .canvas-size-option:hover { background: var(--cb-bg-hover); }
 .cb-root .canvas-size-option .dims { color: var(--cb-text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.cb-root .dropdown-divider { height: 1px; background: var(--cb-border); margin: 4px 8px; }
+.cb-root .dropdown-toggle-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; font-size: 12px; color: var(--cb-text-2); cursor: pointer;
+  border-radius: var(--cb-r-sm); user-select: none;
+}
+.cb-root .dropdown-toggle-row:hover { background: var(--cb-bg-hover); }
+.cb-root .dropdown-toggle-row input[type="checkbox"] { cursor: pointer; accent-color: var(--cb-selection); }
 
 .cb-root .fmt-menu { position: relative; display: flex; }
 .cb-root .fmt-menu .icon-btn { gap: 2px; padding: 0 4px; min-width: 40px; }
@@ -245,6 +253,15 @@
 .cb-root .canvas-el.locked { cursor: default; }
 .cb-root .canvas-el.preview { cursor: default; }
 .cb-root .canvas-el.preview:hover { outline: none !important; }
+.cb-root .canvas-el.responsive::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1.5px dashed var(--cb-selection);
+  pointer-events: none;
+  opacity: 0.45;
+  border-radius: 2px;
+}
 
 /* Fixed/viewport elements still need global scope since they escape the root */
 .canvas-marquee-fixed {

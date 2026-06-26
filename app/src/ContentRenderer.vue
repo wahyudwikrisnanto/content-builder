@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import 'highlight.js/styles/atom-one-dark.css'
-import { renderHtml, bindCopyButtons } from './composables/renderHtml'
+import { renderHtml, renderFlowHtml, bindCopyButtons } from './composables/renderHtml'
 
 const props = defineProps<{
   json: string
+  responsive?: boolean
 }>()
 
 const rootRef = ref<HTMLElement | null>(null)
@@ -15,7 +16,9 @@ const html = computed(() => {
   try {
     const data = JSON.parse(props.json)
     if (!data?.elements || !data?.canvas) return ''
-    return renderHtml({ canvas: data.canvas, elements: data.elements })
+    return props.responsive
+      ? renderFlowHtml({ canvas: data.canvas, elements: data.elements })
+      : renderHtml({ canvas: data.canvas, elements: data.elements })
   } catch {
     return ''
   }

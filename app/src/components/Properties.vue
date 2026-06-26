@@ -340,6 +340,46 @@ const headerLabel = computed(() => {
     </div>
 
     <div class="prop-section">
+      <div class="prop-section-title">Align to canvas</div>
+      <div class="prop-row">
+        <span class="prop-label">H</span>
+        <div class="toggle-group">
+          <button class="toggle-btn" title="Align left" @click="cms.alignH(sel.id, 'left')">
+            <Icon name="align-left-edge" :size="14" />
+          </button>
+          <button class="toggle-btn" title="Center horizontally" @click="cms.alignH(sel.id, 'center')">
+            <Icon name="align-center-h" :size="14" />
+          </button>
+          <button class="toggle-btn" title="Align right" @click="cms.alignH(sel.id, 'right')">
+            <Icon name="align-right-edge" :size="14" />
+          </button>
+        </div>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">V</span>
+        <div class="toggle-group">
+          <button class="toggle-btn" title="Align top" @click="cms.alignV(sel.id, 'top')">
+            <Icon name="align-top-edge" :size="14" />
+          </button>
+          <button class="toggle-btn" title="Center vertically" @click="cms.alignV(sel.id, 'middle')">
+            <Icon name="align-center-v" :size="14" />
+          </button>
+          <button class="toggle-btn" title="Align bottom" @click="cms.alignV(sel.id, 'bottom')">
+            <Icon name="align-bottom-edge" :size="14" />
+          </button>
+        </div>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Fill W</span>
+        <label class="prop-toggle">
+          <input type="checkbox" :checked="!!sel.responsive"
+            @change="cms.toggleResponsive(sel.id)" />
+          <span>Full canvas width</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="prop-section">
       <div class="prop-section-title">Layer</div>
       <div :style="{ display: 'flex', gap: '6px' }">
         <button class="btn-sm" @click="cms.bringForward(sel.id)">

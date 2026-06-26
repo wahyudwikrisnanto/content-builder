@@ -24,6 +24,7 @@ useModifierKeys()
 
 // Guard against feedback loops between external modelValue changes and internal state watches
 let _loading = false
+let _lastEmittedJson = ''
 
 // Exposed: convert CKEditor HTML → JSON string (use the result as v-model value)
 function htmlToJson(html: string, width?: number): string {
@@ -57,10 +58,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 // Sync external modelValue → internal state (e.g. parent replaces content)
 watch(modelValue, (val) => {
   if (!val || _loading) return
-  const current = cms.exportJson()
-  if (val === current) return
+  if (val === _lastEmittedJson) return
   _loading = true
   cms.importJson(val)
+  _lastEmittedJson = val
   _loading = false
 })
 
@@ -70,7 +71,7 @@ watch(
   () => {
     if (_loading) return
     const json = cms.exportJson()
-    if (json === modelValue.value) return
+    _lastEmittedJson = json
     modelValue.value = json
     emit('change', json)
   },

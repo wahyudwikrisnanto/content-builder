@@ -45,6 +45,7 @@ export interface CmsElement {
   href?: string
   target?: '_self' | '_blank'
   copyEnabled?: boolean
+  responsive?: boolean
 }
 
 export type FactoryKey =

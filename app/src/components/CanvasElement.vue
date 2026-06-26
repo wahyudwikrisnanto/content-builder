@@ -80,7 +80,7 @@ function onDblClick(): void {
 
 <template>
   <div
-    :class="['canvas-el', { selected: isSelected && !cms.state.preview, editing: isEditing, locked: element.locked, preview: cms.state.preview }]"
+    :class="['canvas-el', { selected: isSelected && !cms.state.preview, editing: isEditing, locked: element.locked, preview: cms.state.preview, responsive: element.responsive }]"
     :style="{
       position: 'absolute',
       left: element.x + 'px', top: element.y + 'px',

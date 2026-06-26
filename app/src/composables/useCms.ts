@@ -118,6 +118,7 @@ const actions = {
   move(id: string, x: number, y: number): void {
     const i = findIdx(id); if (i < 0) return
     const el = state.elements[i]
+    if (el.responsive) x = 0
     const c = clampPos({ x, y, width: el.width, height: el.height }, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
     const dx = c.x - el.x, dy = c.y - el.y
     state.elements[i] = { ...el, x: c.x, y: c.y }
@@ -262,7 +263,64 @@ const actions = {
     const i = findIdx(id); if (i < 0) return
     state.elements[i] = { ...state.elements[i], locked: !state.elements[i].locked }
   },
-  setCanvas(w: number, h: number): void { state.canvasWidth = w; state.canvasHeight = h },
+  toggleResponsive(id: string): void {
+    const i = findIdx(id); if (i < 0) return
+    snapshot()
+    const el = state.elements[i]
+    const next = !el.responsive
+    const updates: Partial<typeof el> = { responsive: next }
+    if (next) { updates.x = 0; updates.width = state.canvasWidth }
+    state.elements[i] = { ...el, ...updates }
+  },
+  alignH(id: string, side: 'left' | 'center' | 'right'): void {
+    const i = findIdx(id); if (i < 0) return
+    snapshot()
+    const el = state.elements[i]
+    const x = side === 'left' ? 0
+      : side === 'right' ? state.canvasWidth - el.width
+      : (state.canvasWidth - el.width) / 2
+    state.elements[i] = { ...el, x: Math.max(0, x) }
+  },
+  alignV(id: string, side: 'top' | 'middle' | 'bottom'): void {
+    const i = findIdx(id); if (i < 0) return
+    snapshot()
+    const el = state.elements[i]
+    const h = state.flexibleHeight ? Math.max(state.canvasHeight, maxElementBottom(state.elements) + 40) : state.canvasHeight
+    const y = side === 'top' ? 0
+      : side === 'bottom' ? h - el.height
+      : (h - el.height) / 2
+    state.elements[i] = { ...el, y: Math.max(0, y) }
+  },
+  setCanvas(w: number, h: number): void {
+    state.canvasWidth = w; state.canvasHeight = h
+    state.elements = state.elements.map(el =>
+      el.responsive ? { ...el, x: 0, width: w } : el,
+    )
+  },
+  scaleElements(toWidth: number, toHeight: number): void {
+    const fromW = state.canvasWidth
+    const fromH = state.canvasHeight
+    if (fromW === toWidth && fromH === toHeight) return
+    snapshot()
+    const sx = toWidth / fromW
+    const sy = toHeight / fromH
+    state.elements = state.elements.map(el => {
+      const next: typeof el = {
+        ...el,
+        x: Math.round(el.x * sx),
+        y: Math.round(el.y * sy),
+        width: Math.max(20, Math.round(el.width * sx)),
+        height: Math.max(8, Math.round(el.height * sy)),
+      }
+      if (el.styles.fontSize) {
+        next.styles = { ...el.styles, fontSize: Math.max(8, Math.round(el.styles.fontSize * sx)) }
+      }
+      if (el.responsive) { next.x = 0; next.width = toWidth }
+      return next
+    })
+    state.canvasWidth = toWidth
+    state.canvasHeight = toHeight
+  },
   setZoom(z: number): void { state.zoom = Math.max(0.25, Math.min(3, z)) },
   setTab(tab: SidebarTab): void { state.sidebarTab = tab },
   setGuides(g: Guide[]): void { state.guides = g },

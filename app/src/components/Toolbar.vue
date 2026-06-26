@@ -9,6 +9,7 @@ import type { CanvasPreset } from '../types'
 const cms = useCms()
 const showPresets = ref(false)
 const dropRef = ref<HTMLDivElement | null>(null)
+const scaleOnPreset = ref(true)
 
 const PRESETS: CanvasPreset[] = [
   { label: 'Blog Post',    w: 800,  h: 1200 },
@@ -29,7 +30,11 @@ function onDocClick(e: MouseEvent): void {
 }
 
 function applyPreset(p: CanvasPreset): void {
-  cms.setCanvas(p.w, p.h)
+  if (scaleOnPreset.value) {
+    cms.scaleElements(p.w, p.h)
+  } else {
+    cms.setCanvas(p.w, p.h)
+  }
   showPresets.value = false
 }
 
@@ -107,6 +112,11 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
           <span>{{ p.label }}</span>
           <span class="dims">{{ p.w }}×{{ p.h }}</span>
         </button>
+        <div class="dropdown-divider"></div>
+        <label class="dropdown-toggle-row" @mousedown.prevent>
+          <input type="checkbox" v-model="scaleOnPreset" />
+          <span>Scale content to fit</span>
+        </label>
       </div>
     </div>
 

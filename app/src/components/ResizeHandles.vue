@@ -34,8 +34,10 @@ function start(e: MouseEvent, hid: HandleId): void {
     const dx = (ev.clientX - startX) / z
     const dy = (ev.clientY - startY) / z
     let { x, y, w, h } = orig
-    if (hid.includes('e')) w = Math.max(20, orig.w + dx)
-    if (hid.includes('w')) { w = Math.max(20, orig.w - dx); x = orig.x + orig.w - w }
+    if (!props.element.responsive) {
+      if (hid.includes('e')) w = Math.max(20, orig.w + dx)
+      if (hid.includes('w')) { w = Math.max(20, orig.w - dx); x = orig.x + orig.w - w }
+    }
     if (hid.includes('s')) h = Math.max(8, orig.h + dy)
     if (hid.includes('n')) { h = Math.max(8, orig.h - dy); y = orig.y + orig.h - h }
 
@@ -73,7 +75,9 @@ function start(e: MouseEvent, hid: HandleId): void {
 </script>
 
 <template>
-  <div v-for="h in HANDLES" :key="h.id" class="resize-handle"
+  <div v-for="h in HANDLES" :key="h.id"
+    v-show="!element.responsive || (h.id === 'n' || h.id === 's')"
+    class="resize-handle"
     :style="{ position: 'absolute', ...h.css }"
     @mousedown="start($event, h.id)"></div>
 </template>
