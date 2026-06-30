@@ -81,6 +81,7 @@ export interface CmsState {
   flexibleHeight: boolean
   preview: boolean
   previewFullscreen: boolean
+  sidebarHidden: boolean
 }
 
 export interface CanvasPreset { label: string; w: number; h: number }

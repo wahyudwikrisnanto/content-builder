@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useCms } from '../composables/useCms'
+import { usePlugins, findDialogPlugins } from '../composables/usePlugins'
 import Icon from '../icons/Icon.vue'
 import ColorInput from './ColorInput.vue'
 import SearchableSelect from './SearchableSelect.vue'
@@ -8,6 +9,15 @@ import type { ElementType, TextAlign, ListType } from '../types'
 
 const cms = useCms()
 const sel = cms.selected
+const plugins = usePlugins()
+const dialogPlugins = computed(() => sel.value ? findDialogPlugins(plugins, sel.value) : [])
+
+async function runDialogPlugin(idx: number): Promise<void> {
+  const el = sel.value; if (!el) return
+  const plugin = dialogPlugins.value[idx]; if (!plugin) return
+  const patch = await plugin.open(el)
+  if (patch) cms.updateElement(el.id, patch)
+}
 
 const TYPE_LABELS: Record<ElementType, string> = {
   text: 'Text', image: 'Image', shape: 'Shape',
@@ -118,8 +128,18 @@ const headerLabel = computed(() => {
         <button class="icon-btn" title="Duplicate (Ctrl+D)" @click="cms.duplicate(sel.id)">
           <Icon name="copy" :size="15" />
         </button>
-<button class="icon-btn" title="Delete" @click="cms.deleteElement(sel.id)">
+        <button class="icon-btn" title="Delete" @click="cms.deleteElement(sel.id)">
           <Icon name="trash" :size="15" />
+        </button>
+      </div>
+    </div>
+
+    <div v-if="dialogPlugins.length" class="prop-section">
+      <div class="prop-section-title">Actions</div>
+      <div :style="{ display: 'flex', flexWrap: 'wrap', gap: '6px' }">
+        <button v-for="(p, i) in dialogPlugins" :key="i" class="btn-sm" @click="runDialogPlugin(i)">
+          <Icon v-if="p.icon" :name="p.icon" :size="13" />
+          {{ p.label }}
         </button>
       </div>
     </div>

@@ -24,6 +24,7 @@ const state = reactive<CmsState>({
   flexibleHeight: false,
   preview: false,
   previewFullscreen: false,
+  sidebarHidden: false,
 })
 
 function snapshot(): void {
@@ -114,7 +115,12 @@ const actions = {
     state.allSelected = false
     state.guides = []
   },
-  setEditing(id: string | null): void { state.editingTextId = id },
+  setEditing(id: string | null): void {
+    state.editingTextId = id
+    if (id) state.sidebarHidden = true
+    else state.sidebarHidden = false
+  },
+  toggleSidebar(): void { state.sidebarHidden = !state.sidebarHidden },
   move(id: string, x: number, y: number): void {
     const i = findIdx(id); if (i < 0) return
     const el = state.elements[i]

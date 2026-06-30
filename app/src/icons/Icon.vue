@@ -161,6 +161,10 @@ defineProps<{ name: string; size?: number }>()
       <polyline points="15,19 12,22 9,19"/><polyline points="19,9 22,12 19,15"/>
       <line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/>
     </template>
+    <template v-else-if="name === 'sidebar-left'">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <line x1="9" y1="3" x2="9" y2="21"/>
+    </template>
     <template v-else-if="name === 'align-left-edge'">
       <line x1="4" y1="3" x2="4" y2="21"/><rect x="8" y="7" width="12" height="4" rx="1"/><rect x="8" y="13" width="8" height="4" rx="1"/>
     </template>

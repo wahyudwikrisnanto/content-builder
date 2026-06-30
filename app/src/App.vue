@@ -1,9 +1,57 @@
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue'
+import { ref, useTemplateRef, h, defineComponent } from 'vue'
 import ContentBuilder from './ContentBuilder.vue'
 import ContentRenderer from './ContentRenderer.vue'
+import type { CmsPlugin } from './composables/usePlugins'
+import type { CmsElement } from './types'
 import './style.css'
 import './dev.css'
+
+// --- Plugin 1: custom renderer for "button" elements using h() ---
+const FancyButtonRenderer = defineComponent({
+  props: { element: { type: Object as () => CmsElement, required: true } },
+  setup(props) {
+    return () => h('div', {
+      style: {
+        width: '100%', height: '100%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+        borderRadius: '12px',
+        boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: (props.element.styles.fontSize ?? 14) + 'px',
+        fontFamily: 'inherit',
+        cursor: 'pointer',
+      },
+    }, [
+      h('span', { style: { marginRight: '6px' } }, '✦'),
+      props.element.content || 'Button',
+    ])
+  },
+})
+
+// --- Plugin 2: image URL dialog ---
+const imageUrlDialog: CmsPlugin = {
+  type: 'dialog',
+  match: 'image',
+  label: 'Set image URL',
+  icon: 'external-link',
+  open: async (el: CmsElement) => {
+    const url = window.prompt('Image URL:', el.content?.startsWith('data:') ? '' : (el.content || ''))
+    if (url === null) return null
+    return { content: url.trim() }
+  },
+}
+
+const plugins: CmsPlugin[] = [
+  {
+    type: 'renderer',
+    match: 'button',
+    component: FancyButtonRenderer,
+  },
+  imageUrlDialog,
+]
 
 const SAMPLE_HTML = `
 <h1>Welcome to Our Platform</h1>
@@ -58,6 +106,7 @@ function onMounted() {
         v-show="tab === 'builder'"
         ref="builder"
         v-model="json"
+        :plugins="plugins"
         @vue:mounted="onMounted"
       />
 

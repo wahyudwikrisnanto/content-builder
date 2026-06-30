@@ -43,7 +43,7 @@ const baseStyle = computed<CSSProperties>(() => {
     lineHeight: s.lineHeight,
     letterSpacing: s.letterSpacing + 'px',
     borderRadius: s.borderRadius + 'px',
-    overflow: 'hidden', wordWrap: 'break-word', outline: 'none',
+    overflow: props.isEditing ? 'visible' : 'hidden', wordWrap: 'break-word', outline: 'none',
     fontFamily: 'inherit',
     ...textStrokeStyle(s),
   }

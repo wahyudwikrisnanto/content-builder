@@ -240,6 +240,8 @@
 
 .cb-root .canvas-el {
   position: absolute; cursor: move; transition: box-shadow 0.08s;
+  /* overflow visible so selection outline + text cursor aren't clipped */
+  overflow: visible;
 }
 .cb-root .canvas-el:hover:not(.selected):not(.locked) {
   outline: 1.5px solid var(--cb-selection); outline-offset: 0;

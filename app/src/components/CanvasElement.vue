@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
 import { computeSnap } from '../composables/snapping'
 import { modKeys } from '../composables/useModifierKeys'
+import { usePlugins, findRendererPlugin } from '../composables/usePlugins'
 import TextEl from '../elements/TextEl.vue'
 import ImageEl from '../elements/ImageEl.vue'
 import ShapeEl from '../elements/ShapeEl.vue'
@@ -18,12 +20,18 @@ import type { Component } from 'vue'
 
 const props = defineProps<{ element: CmsElement; isSelected: boolean; isEditing: boolean }>()
 const cms = useCms()
+const plugins = usePlugins()
 
 const RENDERERS: Record<ElementType, Component> = {
   text: TextEl, image: ImageEl, shape: ShapeEl,
   video: VideoEl, divider: DividerEl, container: ContainerEl,
   frame: FrameEl, code: CodeEl, button: ButtonEl,
 }
+
+const activeRenderer = computed<Component>(() => {
+  const plugin = findRendererPlugin(plugins, props.element)
+  return plugin ? plugin.component : RENDERERS[props.element.type]
+})
 
 function onMouseDown(e: MouseEvent): void {
   if (cms.state.preview) return
@@ -90,7 +98,7 @@ function onDblClick(): void {
     @mousedown="onMouseDown"
     @dblclick="onDblClick"
   >
-    <component :is="RENDERERS[element.type]" :element="element" :is-editing="isEditing" />
+    <component :is="activeRenderer" :element="element" :is-editing="isEditing" />
     <ResizeHandles v-if="isSelected && !element.locked && !isEditing && !cms.state.preview" :element="element" />
   </div>
 </template>

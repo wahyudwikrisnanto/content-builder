@@ -4,15 +4,18 @@ import './style.css'
 import { useCms } from './composables/useCms'
 import { useModifierKeys } from './composables/useModifierKeys'
 import { parseCKEditorHtml } from './composables/importCKEditor'
+import { providePlugins } from './composables/usePlugins'
 import Toolbar from './components/Toolbar.vue'
 import Sidebar from './components/Sidebar.vue'
 import Canvas from './components/Canvas.vue'
 import Properties from './components/Properties.vue'
 import PreviewView from './components/PreviewView.vue'
+import type { CmsPlugin } from './composables/usePlugins'
 
 // NOTE: useCms() is a module-level singleton — safe for single-instance use.
 // When packaging for multi-instance support, move state into provide/inject per component tree.
 
+const props = defineProps<{ plugins?: CmsPlugin[] }>()
 const modelValue = defineModel<string>()
 
 const emit = defineEmits<{
@@ -21,6 +24,7 @@ const emit = defineEmits<{
 
 const cms = useCms()
 useModifierKeys()
+providePlugins(props.plugins ?? [])
 
 // Guard against feedback loops between external modelValue changes and internal state watches
 let _loading = false
@@ -119,7 +123,7 @@ function onKey(e: KeyboardEvent): void {
         <PreviewView />
       </template>
       <template v-else>
-        <Sidebar v-if="!cms.state.fullscreen" />
+        <Sidebar v-if="!cms.state.fullscreen && !cms.state.sidebarHidden" />
         <Canvas />
         <Properties v-if="!cms.state.fullscreen" />
       </template>

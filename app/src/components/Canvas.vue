@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCms } from '../composables/useCms'
 import { CmsFactories } from '../composables/factories'
 import CanvasElement from './CanvasElement.vue'
@@ -26,6 +26,13 @@ const marqueeStyle = computed(() => {
   }
 })
 
+function onWheel(e: WheelEvent): void {
+  if (!e.ctrlKey && !e.metaKey) return
+  e.preventDefault()
+  const delta = e.deltaY > 0 ? -0.1 : 0.1
+  cms.setZoom(Math.round((cms.state.zoom + delta) * 10) / 10)
+}
+
 onMounted(() => {
   const el = scrollRef.value
   if (!el) return
@@ -38,6 +45,12 @@ onMounted(() => {
   )
   const rounded = Math.round(fitZoom * 20) / 20
   if (rounded < 1) cms.setZoom(Math.max(0.25, rounded))
+  // passive:false required to call preventDefault on wheel
+  el.addEventListener('wheel', onWheel, { passive: false })
+})
+
+onUnmounted(() => {
+  scrollRef.value?.removeEventListener('wheel', onWheel)
 })
 
 function onDrop(e: DragEvent): void {

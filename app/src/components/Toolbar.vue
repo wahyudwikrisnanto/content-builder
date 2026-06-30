@@ -136,6 +136,12 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
 
     <div class="toolbar-group">
       <button
+        :class="['icon-btn', { 'icon-btn-active': cms.state.sidebarHidden }]"
+        @click="cms.toggleSidebar()"
+        title="Toggle sidebar">
+        <Icon name="sidebar-left" :size="17" />
+      </button>
+      <button
         :class="['icon-btn', { 'icon-btn-active': cms.state.preview }]"
         @click="cms.togglePreview()"
         :title="cms.state.preview ? 'Exit preview (Esc)' : 'Preview mode'">
