@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCms } from '../composables/useCms'
+import { useBuilderConfig } from '../composables/useBuilderConfig'
 import Icon from '../icons/Icon.vue'
 import ImportModal from './ImportModal.vue'
 import type { CanvasPreset } from '../types'
 
 
 const cms = useCms()
+const config = useBuilderConfig()
 const showPresets = ref(false)
 const dropRef = ref<HTMLDivElement | null>(null)
 const scaleOnPreset = ref(true)
 
-const PRESETS: CanvasPreset[] = [
+const BUILT_IN_PRESETS: CanvasPreset[] = [
   { label: 'Blog Post',    w: 800,  h: 1200 },
   { label: 'Landing Page', w: 1440, h: 900  },
   { label: 'Email',        w: 600,  h: 800  },
@@ -21,6 +23,12 @@ const PRESETS: CanvasPreset[] = [
   { label: 'Tablet',       w: 768,  h: 1024 },
   { label: 'A4 Portrait',  w: 794,  h: 1123 },
 ]
+
+const presets = computed<CanvasPreset[]>(() =>
+  config.canvasSizes?.length ? config.canvasSizes : BUILT_IN_PRESETS
+)
+const singlePreset = computed(() => presets.value.length === 1)
+const showScaleToggle = computed(() => config.showScaleToggle !== false)
 
 function onDocClick(e: MouseEvent): void {
   const t = e.target as Node
@@ -102,21 +110,23 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
     <div class="toolbar-divider"></div>
 
     <div class="canvas-size-selector" ref="dropRef">
-      <button class="canvas-size-btn" @click="showPresets = !showPresets">
+      <button class="canvas-size-btn" :disabled="singlePreset" @click="!singlePreset && (showPresets = !showPresets)">
         <span>{{ cms.state.canvasWidth }} × {{ cms.state.canvasHeight }}</span>
-        <Icon name="chevron-down" :size="14" />
+        <Icon v-if="!singlePreset" name="chevron-down" :size="14" />
       </button>
-      <div v-if="showPresets" class="canvas-size-dropdown">
+      <div v-if="showPresets && !singlePreset" class="canvas-size-dropdown">
         <div class="dropdown-label">Canvas presets</div>
-        <button v-for="p in PRESETS" :key="p.label" class="canvas-size-option" @click="applyPreset(p)">
+        <button v-for="p in presets" :key="p.label" class="canvas-size-option" @click="applyPreset(p)">
           <span>{{ p.label }}</span>
           <span class="dims">{{ p.w }}×{{ p.h }}</span>
         </button>
-        <div class="dropdown-divider"></div>
-        <label class="dropdown-toggle-row" @mousedown.prevent>
-          <input type="checkbox" v-model="scaleOnPreset" />
-          <span>Scale content to fit</span>
-        </label>
+        <template v-if="showScaleToggle">
+          <div class="dropdown-divider"></div>
+          <label class="dropdown-toggle-row" @mousedown.prevent>
+            <input type="checkbox" v-model="scaleOnPreset" />
+            <span>Scale content to fit</span>
+          </label>
+        </template>
       </div>
     </div>
 

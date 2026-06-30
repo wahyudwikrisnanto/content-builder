@@ -84,4 +84,41 @@ export interface CmsState {
   sidebarHidden: boolean
 }
 
-export interface CanvasPreset { label: string; w: number; h: number }
+export interface CanvasPreset {
+  label: string
+  w: number
+  h: number
+  /** Mark as the default preset. Auto-set when only one preset is provided. */
+  default?: boolean
+}
+
+export type SidebarSection = 'elements' | 'layers' | 'textStyles'
+
+export interface SidebarConfig {
+  /**
+   * Which sections to show and in what order.
+   * Omit to show all three in default order.
+   * Pass [] to hide the sidebar entirely.
+   */
+  sections?: SidebarSection[]
+  /** Per-section label / visibility overrides. */
+  sectionOptions?: Partial<Record<SidebarSection, { label?: string; hidden?: boolean }>>
+}
+
+export type CanvasHeightMode = 'flexible' | 'fixed'
+
+export interface BuilderConfig {
+  /**
+   * Canvas size presets for the toolbar dropdown.
+   * - Omitted / empty → built-in presets.
+   * - Exactly 1 item → applied as default on mount, dropdown hidden.
+   * - Multiple items → shown in dropdown; item with default:true (or index 0) applied on mount.
+   */
+  canvasSizes?: CanvasPreset[]
+  /** Sidebar panel configuration. */
+  sidebar?: SidebarConfig
+  /** Sets initial flexibleHeight state. Default: 'fixed'. */
+  canvasHeightMode?: CanvasHeightMode
+  /** Show the "Scale content to fit" toggle in the preset dropdown. Default: true. */
+  showScaleToggle?: boolean
+}

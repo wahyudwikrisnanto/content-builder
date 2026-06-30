@@ -2,19 +2,30 @@
 import { computed, ref } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
+import { useBuilderConfig } from '../composables/useBuilderConfig'
+import { resolveVisibleSections, resolveSectionLabel } from '../composables/config'
 import { CmsFactories } from '../composables/factories'
 import Icon from '../icons/Icon.vue'
 import DragItem from './DragItem.vue'
-import type { CmsElement, ElementType, FactoryKey, SidebarTab } from '../types'
+import type { CmsElement, ElementType, FactoryKey, SidebarTab, SidebarSection } from '../types'
 
 const cms = useCms()
+const config = useBuilderConfig()
 
-interface Tab { id: SidebarTab; label: string; icon: string }
-const TABS: Tab[] = [
-  { id: 'elements',   label: 'Elements', icon: 'plus' },
-  { id: 'layers',     label: 'Layers',   icon: 'layers' },
-  { id: 'textStyles', label: 'Styles',   icon: 'type' },
-]
+interface Tab { id: SidebarSection; label: string; icon: string }
+const SECTION_ICONS: Record<SidebarSection, string> = {
+  elements: 'plus',
+  layers: 'layers',
+  textStyles: 'type',
+}
+
+const visibleTabs = computed<Tab[]>(() =>
+  resolveVisibleSections(config.sidebar).map(id => ({
+    id,
+    label: resolveSectionLabel(id, config.sidebar),
+    icon: SECTION_ICONS[id],
+  }))
+)
 
 const TYPE_ICON: Record<ElementType, string> = {
   text: 'type', image: 'image', shape: 'square',
@@ -110,11 +121,11 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
 </script>
 
 <template>
-  <div class="sidebar">
+  <div v-if="visibleTabs.length" class="sidebar">
     <div class="sidebar-tabs">
-      <button v-for="t in TABS" :key="t.id"
+      <button v-for="t in visibleTabs" :key="t.id"
         :class="['sidebar-tab', { active: cms.state.sidebarTab === t.id }]"
-        @click="cms.setTab(t.id)">
+        @click="cms.setTab(t.id as SidebarTab)">
         <Icon :name="t.icon" :size="15" />
         <span>{{ t.label }}</span>
       </button>

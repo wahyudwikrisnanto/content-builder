@@ -5,17 +5,20 @@ import { useCms } from './composables/useCms'
 import { useModifierKeys } from './composables/useModifierKeys'
 import { parseCKEditorHtml } from './composables/importCKEditor'
 import { providePlugins } from './composables/usePlugins'
+import { provideBuilderConfig } from './composables/useBuilderConfig'
+import { resolveDefaultPreset } from './composables/config'
 import Toolbar from './components/Toolbar.vue'
 import Sidebar from './components/Sidebar.vue'
 import Canvas from './components/Canvas.vue'
 import Properties from './components/Properties.vue'
 import PreviewView from './components/PreviewView.vue'
 import type { CmsPlugin } from './composables/usePlugins'
+import type { BuilderConfig } from './types'
 
 // NOTE: useCms() is a module-level singleton — safe for single-instance use.
 // When packaging for multi-instance support, move state into provide/inject per component tree.
 
-const props = defineProps<{ plugins?: CmsPlugin[] }>()
+const props = defineProps<{ plugins?: CmsPlugin[]; config?: BuilderConfig }>()
 const modelValue = defineModel<string>()
 
 const emit = defineEmits<{
@@ -25,6 +28,7 @@ const emit = defineEmits<{
 const cms = useCms()
 useModifierKeys()
 providePlugins(props.plugins ?? [])
+provideBuilderConfig(props.config)
 
 // Guard against feedback loops between external modelValue changes and internal state watches
 let _loading = false
@@ -49,10 +53,18 @@ defineExpose({ htmlToJson })
 
 // Load initial content once on mount
 onMounted(() => {
+  // Apply canvas height mode from config before loading content
+  if (props.config?.canvasHeightMode === 'flexible') cms.state.flexibleHeight = true
+  else if (props.config?.canvasHeightMode === 'fixed') cms.state.flexibleHeight = false
+
   if (modelValue.value) {
     _loading = true
     cms.importJson(modelValue.value)
     _loading = false
+  } else {
+    // Apply default canvas size preset only when no content is loaded
+    const defaultPreset = resolveDefaultPreset(props.config?.canvasSizes)
+    if (defaultPreset) cms.setCanvas(defaultPreset.w, defaultPreset.h)
   }
   window.addEventListener('keydown', onKey)
 })

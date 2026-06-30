@@ -3,7 +3,7 @@ import { ref, useTemplateRef, h, defineComponent } from 'vue'
 import ContentBuilder from './ContentBuilder.vue'
 import ContentRenderer from './ContentRenderer.vue'
 import type { CmsPlugin } from './composables/usePlugins'
-import type { CmsElement } from './types'
+import type { BuilderConfig, CmsElement } from './types'
 import './style.css'
 import './dev.css'
 
@@ -52,6 +52,26 @@ const plugins: CmsPlugin[] = [
   },
   imageUrlDialog,
 ]
+
+const config: BuilderConfig = {
+  // Two canvas sizes — first is default on mount
+  canvasSizes: [
+    { label: 'Desktop', w: 1200, h: 900, default: true },
+    { label: 'Mobile',  w: 375,  h: 812 },
+    { label: 'Email',   w: 600,  h: 800 },
+  ],
+  // Show only Elements and Layers tabs, rename Layers → "Structure"
+  sidebar: {
+    sections: ['elements', 'layers'],
+    sectionOptions: {
+      layers: { label: 'Structure' },
+    },
+  },
+  // Canvas grows with content
+  canvasHeightMode: 'flexible',
+  // Keep the scale toggle visible in the preset dropdown
+  showScaleToggle: true,
+}
 
 const SAMPLE_HTML = `
 <h1>Welcome to Our Platform</h1>
@@ -107,6 +127,7 @@ function onMounted() {
         ref="builder"
         v-model="json"
         :plugins="plugins"
+        :config="config"
         @vue:mounted="onMounted"
       />
 
