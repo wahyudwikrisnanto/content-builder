@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
 import { computeSnap } from '../composables/snapping'
@@ -14,6 +14,7 @@ import ContainerEl from '../elements/ContainerEl.vue'
 import FrameEl from '../elements/FrameEl.vue'
 import CodeEl from '../elements/CodeEl.vue'
 import ButtonEl from '../elements/ButtonEl.vue'
+import InputEl from '../elements/InputEl.vue'
 import ResizeHandles from './ResizeHandles.vue'
 import type { CmsElement, ElementType } from '../types'
 import type { Component } from 'vue'
@@ -25,7 +26,7 @@ const plugins = usePlugins()
 const RENDERERS: Record<ElementType, Component> = {
   text: TextEl, image: ImageEl, shape: ShapeEl,
   video: VideoEl, divider: DividerEl, container: ContainerEl,
-  frame: FrameEl, code: CodeEl, button: ButtonEl,
+  frame: FrameEl, code: CodeEl, button: ButtonEl, input: InputEl,
 }
 
 const activeRenderer = computed<Component>(() => {
@@ -33,10 +34,35 @@ const activeRenderer = computed<Component>(() => {
   return plugin ? plugin.component : RENDERERS[props.element.type]
 })
 
+// Clip-path for elements inside a frame with clipContent:true
+const clipStyle = computed<CSSProperties>(() => {
+  const parentId = props.element.parentId
+  if (!parentId) return {}
+  const frame = cms.state.elements.find(e => e.id === parentId)
+  if (!frame || !frame.clipContent) return {}
+  // inset values relative to the child element's position
+  const top    = frame.y - props.element.y
+  const left   = frame.x - props.element.x
+  const right  = (props.element.x + props.element.width)  - (frame.x + frame.width)
+  const bottom = (props.element.y + props.element.height) - (frame.y + frame.height)
+  return {
+    clipPath: `inset(${Math.max(0, top)}px ${Math.max(0, right)}px ${Math.max(0, bottom)}px ${Math.max(0, left)}px)`,
+  }
+})
+
+const isFrame = computed(() => props.element.type === 'frame')
+
 function onMouseDown(e: MouseEvent): void {
   if (cms.state.preview) return
   if (props.element.locked || props.isEditing) return
   e.stopPropagation()
+
+  // First click selects only — drag only starts when already selected
+  if (!props.isSelected) {
+    cms.select(props.element.id)
+    return
+  }
+
   cms.select(props.element.id)
 
   const z = cms.state.zoom
@@ -94,10 +120,16 @@ function onDblClick(): void {
       left: element.x + 'px', top: element.y + 'px',
       width: element.width + 'px', height: element.height + 'px',
       opacity: element.styles.opacity != null ? element.styles.opacity : 1,
+      ...clipStyle,
     }"
     @mousedown="onMouseDown"
     @dblclick="onDblClick"
   >
+    <!-- Floating frame label — click to select the frame without starting a drag -->
+    <div v-if="isFrame && !cms.state.preview" class="canvas-el-frame-label"
+      @mousedown.stop="cms.select(element.id)">
+      {{ element.name || 'Frame' }}
+    </div>
     <component :is="activeRenderer" :element="element" :is-editing="isEditing" />
     <ResizeHandles v-if="isSelected && !element.locked && !isEditing && !cms.state.preview" :element="element" />
   </div>

@@ -187,5 +187,28 @@ defineProps<{ name: string; size?: number }>()
       <rect x="2" y="6" width="20" height="12" rx="2"/>
       <line x1="2" y1="12" x2="22" y2="12" stroke-dasharray="3 2"/>
     </template>
+    <template v-else-if="name === 'input'">
+      <rect x="2" y="7" width="20" height="10" rx="2"/>
+      <line x1="6" y1="12" x2="10" y2="12"/>
+    </template>
+    <template v-else-if="name === 'input-textarea'">
+      <rect x="2" y="4" width="20" height="16" rx="2"/>
+      <line x1="6" y1="9" x2="18" y2="9"/>
+      <line x1="6" y1="13" x2="14" y2="13"/>
+    </template>
+    <template v-else-if="name === 'input-select'">
+      <rect x="2" y="7" width="20" height="10" rx="2"/>
+      <polyline points="15,10 18,12 15,14"/>
+      <line x1="18" y1="12" x2="2" y2="12" stroke="none"/>
+      <line x1="16" y1="12" x2="22" y2="12" stroke="none"/>
+    </template>
+    <template v-else-if="name === 'input-checkbox'">
+      <rect x="3" y="3" width="18" height="18" rx="3"/>
+      <polyline points="7,12 10,15 17,9"/>
+    </template>
+    <template v-else-if="name === 'input-radio'">
+      <circle cx="12" cy="12" r="9"/>
+      <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>
+    </template>
   </svg>
 </template>

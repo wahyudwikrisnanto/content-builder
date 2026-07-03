@@ -116,7 +116,8 @@ function renderContainer(el: CmsElement): string {
 
 function renderFrame(el: CmsElement): string {
   const s = el.styles
-  return `<div style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#FFF'};border-radius:${s.borderRadius || 0}px;border:${s.borderWidth || 1}px solid ${s.borderColor || '#D4D4D4'}"></div></div>`
+  const clip = el.clipContent ? 'overflow:hidden;' : ''
+  return `<div style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || '#FFF'};border-radius:${s.borderRadius || 0}px;border:${s.borderWidth || 1}px solid ${s.borderColor || '#D4D4D4'}"></div></div>`
 }
 
 function renderButton(el: CmsElement): string {
@@ -182,6 +183,45 @@ function renderCode(el: CmsElement): string {
   return `<div style="${commonBoxStyle(el)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
 }
 
+function renderInput(el: CmsElement): string {
+  const s = el.styles
+  const t = el.inputType || 'text'
+  const labelHtml = el.inputLabel
+    ? `<label style="display:block;font-size:${s.fontSize ?? 14}px;font-weight:500;color:${s.color || '#374151'};font-family:inherit;margin-bottom:4px">${escape(el.inputLabel)}${el.required ? '<span style="color:#ef4444"> *</span>' : ''}</label>`
+    : ''
+  const fieldStyle = [
+    'width:100%', 'font-family:inherit',
+    `font-size:${s.fontSize ?? 14}px`,
+    `color:${s.color || '#222'}`,
+    `background-color:${s.backgroundColor || '#fff'}`,
+    `border:${s.borderWidth ?? 1}px solid ${s.borderColor || '#D1D5DB'}`,
+    `border-radius:${s.borderRadius ?? 6}px`,
+    `padding:${s.padding ?? 10}px`,
+    `opacity:${s.opacity ?? 1}`,
+    'box-sizing:border-box', 'outline:none',
+  ].join(';')
+
+  let inner = ''
+  if (t === 'textarea') {
+    inner = `${labelHtml}<textarea placeholder="${escape(el.placeholder || '')}" style="${fieldStyle};height:calc(100% - ${el.inputLabel ? 26 : 0}px);resize:none"${el.required ? ' required' : ''}></textarea>`
+  } else if (t === 'select') {
+    const opts = (el.inputOptions || '').split('\n').map(o => o.trim()).filter(Boolean)
+      .map(o => `<option value="${escape(o)}">${escape(o)}</option>`).join('')
+    const placeholderOpt = el.placeholder ? `<option value="" disabled selected>${escape(el.placeholder)}</option>` : ''
+    inner = `${labelHtml}<select style="${fieldStyle};cursor:pointer"${el.required ? ' required' : ''}>${placeholderOpt}${opts}</select>`
+  } else if (t === 'checkbox') {
+    inner = `<label style="display:flex;align-items:center;gap:8px;font-size:${s.fontSize ?? 14}px;color:${s.color || '#222'};font-family:inherit;cursor:pointer;height:100%"><input type="checkbox"${el.required ? ' required' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:#2563eb"/><span>${escape(el.inputLabel || 'Checkbox')}</span>${el.required ? '<span style="color:#ef4444">*</span>' : ''}</label>`
+  } else if (t === 'radio') {
+    const opts = (el.inputOptions || '').split('\n').map(o => o.trim()).filter(Boolean)
+      .map(o => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="radio" name="${escape(el.id)}" value="${escape(o)}" style="width:15px;height:15px;accent-color:#2563eb"/><span>${escape(o)}</span></label>`).join('')
+    inner = `<div style="display:flex;flex-direction:column;gap:6px;height:100%;overflow:auto;font-size:${s.fontSize ?? 14}px;color:${s.color || '#222'};font-family:inherit">${opts}</div>`
+  } else {
+    inner = `${labelHtml}<input type="${escape(t)}" placeholder="${escape(el.placeholder || '')}" style="${fieldStyle}"${el.required ? ' required' : ''}/>`
+  }
+
+  return `<div style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
+}
+
 const RENDERERS: Record<string, (el: CmsElement) => string> = {
   text: renderText,
   image: renderImage,
@@ -192,6 +232,7 @@ const RENDERERS: Record<string, (el: CmsElement) => string> = {
   frame: renderFrame,
   button: renderButton,
   code: renderCode,
+  input: renderInput,
 }
 
 /**

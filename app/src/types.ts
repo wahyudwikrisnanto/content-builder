@@ -1,4 +1,5 @@
-export type ElementType = 'text' | 'image' | 'shape' | 'video' | 'divider' | 'container' | 'frame' | 'code' | 'button'
+export type ElementType = 'text' | 'image' | 'shape' | 'video' | 'divider' | 'container' | 'frame' | 'code' | 'button' | 'input'
+export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'textarea' | 'select' | 'checkbox' | 'radio'
 export type ShapeType = 'rect' | 'circle' | 'line'
 export type SidebarTab = 'elements' | 'layers' | 'textStyles'
 export type TextAlign = 'left' | 'center' | 'right' | 'justify'
@@ -46,6 +47,13 @@ export interface CmsElement {
   target?: '_self' | '_blank'
   copyEnabled?: boolean
   responsive?: boolean
+  clipContent?: boolean
+  // input element fields
+  inputType?: InputType
+  placeholder?: string
+  inputLabel?: string
+  required?: boolean
+  inputOptions?: string   // newline-separated options for select/radio
 }
 
 export type FactoryKey =
@@ -53,6 +61,8 @@ export type FactoryKey =
   | 'image'
   | 'shape-rect' | 'shape-circle' | 'shape-line'
   | 'video' | 'divider' | 'container' | 'frame' | 'code' | 'button'
+  | 'input' | 'input-text' | 'input-email' | 'input-password' | 'input-number'
+  | 'input-textarea' | 'input-select' | 'input-checkbox' | 'input-radio'
 
 export type Factory = (x?: number, y?: number) => CmsElement
 

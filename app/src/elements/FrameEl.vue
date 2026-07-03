@@ -14,26 +14,11 @@ const style = computed<CSSProperties>(() => {
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}` : '1px solid #D4D4D4',
     opacity: s.opacity ?? 1,
     position: 'relative',
+    overflow: props.element.clipContent ? 'hidden' : 'visible',
   }
 })
 </script>
 
 <template>
-  <div :style="style">
-    <div class="frame-label">{{ element.name || 'Frame' }}</div>
-  </div>
+  <div :style="style" />
 </template>
-
-<style scoped>
-.frame-label {
-  position: absolute;
-  left: 0;
-  top: -18px;
-  font-size: 11px;
-  color: var(--text-2);
-  font-weight: 500;
-  pointer-events: none;
-  user-select: none;
-  white-space: nowrap;
-}
-</style>

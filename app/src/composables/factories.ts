@@ -1,4 +1,4 @@
-import type { CmsElement, ElementStyles, Factory, FactoryKey, ShapeType } from '../types'
+import type { CmsElement, ElementStyles, Factory, FactoryKey, InputType, ShapeType } from '../types'
 
 let _uid = Date.now()
 export const cmsUid = (): string => `el-${_uid++}`
@@ -140,6 +140,35 @@ function createCode(x = 60, y = 60): CmsElement {
   }
 }
 
+function createInput(x = 60, y = 60, inputType: InputType = 'text'): CmsElement {
+  const isMultiline = inputType === 'textarea'
+  const isCheck = inputType === 'checkbox' || inputType === 'radio'
+  const isSelect = inputType === 'select'
+  return {
+    id: cmsUid(), type: 'input', x, y,
+    width: isCheck ? 200 : 280,
+    height: isMultiline ? 100 : isCheck ? 28 : 44,
+    content: '',
+    inputType,
+    inputLabel: inputType === 'checkbox' ? 'Check me'
+      : inputType === 'radio' ? 'Option 1\nOption 2\nOption 3'
+      : inputType === 'select' ? ''
+      : '',
+    placeholder: isCheck || isSelect ? '' : `Enter ${inputType}...`,
+    inputOptions: isSelect ? 'Option 1\nOption 2\nOption 3' : inputType === 'radio' ? 'Option 1\nOption 2\nOption 3' : '',
+    required: false,
+    styles: {
+      fontSize: 14, fontWeight: '400', color: '#222222',
+      backgroundColor: isCheck ? 'transparent' : '#FFFFFF',
+      borderRadius: isCheck ? 0 : 6,
+      borderWidth: isCheck ? 0 : 1,
+      borderColor: '#D1D5DB',
+      opacity: 1, padding: isCheck ? 0 : 10,
+    },
+    ...baseFlags(),
+  }
+}
+
 function createContainer(x = 60, y = 60): CmsElement {
   return {
     id: cmsUid(), type: 'container', x, y, width: 360, height: 240, content: '',
@@ -164,4 +193,13 @@ export const CmsFactories: Record<FactoryKey, Factory> = {
   'frame':           createFrame,
   'code':            createCode,
   'button':          createButton,
+  'input':           createInput,
+  'input-text':      (x, y) => createInput(x, y, 'text'),
+  'input-email':     (x, y) => createInput(x, y, 'email'),
+  'input-password':  (x, y) => createInput(x, y, 'password'),
+  'input-number':    (x, y) => createInput(x, y, 'number'),
+  'input-textarea':  (x, y) => createInput(x, y, 'textarea'),
+  'input-select':    (x, y) => createInput(x, y, 'select'),
+  'input-checkbox':  (x, y) => createInput(x, y, 'checkbox'),
+  'input-radio':     (x, y) => createInput(x, y, 'radio'),
 }

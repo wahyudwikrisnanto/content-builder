@@ -5,7 +5,7 @@ import { usePlugins, findDialogPlugins } from '../composables/usePlugins'
 import Icon from '../icons/Icon.vue'
 import ColorInput from './ColorInput.vue'
 import SearchableSelect from './SearchableSelect.vue'
-import type { ElementType, TextAlign, ListType } from '../types'
+import type { ElementType, InputType, TextAlign, ListType } from '../types'
 
 const cms = useCms()
 const sel = cms.selected
@@ -22,8 +22,21 @@ async function runDialogPlugin(idx: number): Promise<void> {
 const TYPE_LABELS: Record<ElementType, string> = {
   text: 'Text', image: 'Image', shape: 'Shape',
   video: 'Video', divider: 'Divider', container: 'Container',
-  frame: 'Frame', code: 'Code', button: 'Button',
+  frame: 'Frame', code: 'Code', button: 'Button', input: 'Input',
 }
+
+const INPUT_TYPES: { v: InputType; label: string }[] = [
+  { v: 'text',     label: 'Text' },
+  { v: 'email',    label: 'Email' },
+  { v: 'password', label: 'Password' },
+  { v: 'number',   label: 'Number' },
+  { v: 'tel',      label: 'Phone' },
+  { v: 'url',      label: 'URL' },
+  { v: 'textarea', label: 'Textarea' },
+  { v: 'select',   label: 'Select' },
+  { v: 'checkbox', label: 'Checkbox' },
+  { v: 'radio',    label: 'Radio' },
+]
 
 const LANGUAGES = [
   'plaintext', 'javascript', 'typescript', 'python', 'ruby', 'go', 'rust',
@@ -61,7 +74,7 @@ function applyCanvas(): void { cms.setCanvas(Math.max(100, +cw.value), Math.max(
 const targetValue = (e: Event): string => (e.target as HTMLInputElement).value
 const targetNumber = (e: Event): number => +(e.target as HTMLInputElement).value
 
-function upd(id: string, k: 'x' | 'y' | 'width' | 'height' | 'content' | 'name' | 'language' | 'href' | 'target' | 'copyEnabled', v: number | string | boolean): void {
+function upd(id: string, k: 'x' | 'y' | 'width' | 'height' | 'content' | 'name' | 'language' | 'href' | 'target' | 'copyEnabled' | 'inputType' | 'inputLabel' | 'placeholder' | 'inputOptions' | 'required', v: number | string | boolean): void {
   cms.updateElement(id, { [k]: v } as any)
 }
 function sty(id: string, k: string, v: number | string): void {
@@ -347,12 +360,64 @@ const headerLabel = computed(() => {
       </div>
     </div>
 
+    <div v-if="sel.type === 'input'" class="prop-section">
+      <div class="prop-section-title">Input</div>
+      <div class="prop-row">
+        <span class="prop-label">Type</span>
+        <select class="prop-select" :value="sel.inputType || 'text'"
+          @change="upd(sel.id, 'inputType', targetValue($event))">
+          <option v-for="t in INPUT_TYPES" :key="t.v" :value="t.v">{{ t.label }}</option>
+        </select>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Label</span>
+        <input class="prop-input" type="text" placeholder="Optional label"
+          :value="sel.inputLabel || ''"
+          @input="upd(sel.id, 'inputLabel', targetValue($event))" />
+      </div>
+      <div v-if="sel.inputType !== 'checkbox'" class="prop-row">
+        <span class="prop-label">Placeholder</span>
+        <input class="prop-input" type="text" placeholder="Placeholder text"
+          :value="sel.placeholder || ''"
+          @input="upd(sel.id, 'placeholder', targetValue($event))" />
+      </div>
+      <div v-if="sel.inputType === 'select' || sel.inputType === 'radio'" class="prop-row" :style="{ alignItems: 'flex-start' }">
+        <span class="prop-label" :style="{ marginTop: '6px' }">Options</span>
+        <textarea class="prop-input" :style="{ height: '80px', padding: '6px', resize: 'vertical' }"
+          placeholder="One option per line"
+          :value="sel.inputOptions || ''"
+          @input="upd(sel.id, 'inputOptions', targetValue($event))"></textarea>
+      </div>
+      <div v-if="sel.inputType === 'checkbox'" class="prop-row">
+        <span class="prop-label">Text</span>
+        <input class="prop-input" type="text" placeholder="Checkbox label"
+          :value="sel.inputLabel || ''"
+          @input="upd(sel.id, 'inputLabel', targetValue($event))" />
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Required</span>
+        <label class="prop-toggle">
+          <input type="checkbox" :checked="!!sel.required"
+            @change="upd(sel.id, 'required', ($event.target as HTMLInputElement).checked)" />
+          <span>Mark as required</span>
+        </label>
+      </div>
+    </div>
+
     <div v-if="sel.type === 'frame'" class="prop-section">
       <div class="prop-section-title">Frame</div>
       <div class="prop-row">
         <span class="prop-label">Name</span>
         <input class="prop-input" type="text" :value="sel.name || ''"
           @input="upd(sel.id, 'name', targetValue($event))" />
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Clip</span>
+        <label class="prop-toggle">
+          <input type="checkbox" :checked="!!sel.clipContent"
+            @change="cms.updateElement(sel.id, { clipContent: ($event.target as HTMLInputElement).checked })" />
+          <span>Hide overflow</span>
+        </label>
       </div>
       <div :style="{ display: 'flex', gap: '6px', marginTop: '4px' }">
         <button class="btn-sm" @click="cms.ungroupFrame(sel.id)">Ungroup</button>

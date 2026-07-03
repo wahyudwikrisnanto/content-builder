@@ -30,7 +30,7 @@ const visibleTabs = computed<Tab[]>(() =>
 const TYPE_ICON: Record<ElementType, string> = {
   text: 'type', image: 'image', shape: 'square',
   video: 'video', divider: 'divider', container: 'container',
-  frame: 'frame', code: 'code', button: 'button',
+  frame: 'frame', code: 'code', button: 'button', input: 'input',
 }
 
 interface TextPreset { key: FactoryKey; label: string; desc: string; style: CSSProperties }
@@ -200,6 +200,36 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
               <div :style="{ width: '32px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }">
                 <div :style="{ width: '100%', height: '1px', background: '#D0D0D0' }"></div>
               </div>
+            </DragItem>
+          </div>
+        </div>
+
+        <div class="element-section">
+          <div class="element-section-title">Forms</div>
+          <div class="element-grid">
+            <DragItem type="input-text" label="Text input">
+              <div class="element-item-icon"><Icon name="input" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-email" label="Email">
+              <div class="element-item-icon"><Icon name="input" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-password" label="Password">
+              <div class="element-item-icon"><Icon name="input" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-number" label="Number">
+              <div class="element-item-icon"><Icon name="input" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-textarea" label="Textarea">
+              <div class="element-item-icon"><Icon name="input-textarea" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-select" label="Select">
+              <div class="element-item-icon"><Icon name="input-select" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-checkbox" label="Checkbox">
+              <div class="element-item-icon"><Icon name="input-checkbox" :size="22" /></div>
+            </DragItem>
+            <DragItem type="input-radio" label="Radio">
+              <div class="element-item-icon"><Icon name="input-radio" :size="22" /></div>
             </DragItem>
           </div>
         </div>
