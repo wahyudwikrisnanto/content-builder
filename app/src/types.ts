@@ -6,6 +6,8 @@ export type TextAlign = 'left' | 'center' | 'right' | 'justify'
 export type ListType = 'none' | 'bullet' | 'number'
 export type FontWeight = '300' | '400' | '500' | '600' | '700'
 export type ObjectFit = 'cover' | 'contain' | 'fill'
+export type LayoutDirection = 'none' | 'vertical' | 'horizontal'
+export type LayoutAlign = 'start' | 'center' | 'end' | 'stretch'
 
 export interface ElementStyles {
   fontSize?: number
@@ -19,10 +21,15 @@ export interface ElementStyles {
   letterSpacing?: number
   borderRadius?: number
   padding?: number
+  paddingTop?: number
+  paddingRight?: number
+  paddingBottom?: number
+  paddingLeft?: number
   borderWidth?: number
   borderColor?: string
   opacity?: number
   objectFit?: ObjectFit
+  objectPosition?: string
   listType?: ListType
   textStrokeWidth?: number
   textStrokeColor?: string
@@ -48,6 +55,14 @@ export interface CmsElement {
   copyEnabled?: boolean
   responsive?: boolean
   clipContent?: boolean
+  // Auto-layout (frames only). direction 'none' = free positioning
+  layoutDirection?: LayoutDirection
+  layoutGap?: number
+  layoutPadding?: number
+  layoutAlign?: LayoutAlign
+  layoutGrow?: boolean
+  /** User manually resized height — auto-size stops shrinking below this. */
+  manualHeight?: boolean
   // input element fields
   inputType?: InputType
   placeholder?: string

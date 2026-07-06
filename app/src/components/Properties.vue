@@ -81,6 +81,37 @@ function sty(id: string, k: string, v: number | string): void {
   cms.updateStyles(id, { [k]: v } as any)
 }
 
+function setPadX(id: string, v: number): void {
+  cms.updateStyles(id, { paddingLeft: v, paddingRight: v })
+}
+function setPadY(id: string, v: number): void {
+  cms.updateStyles(id, { paddingTop: v, paddingBottom: v })
+}
+const padSidesExpanded = ref(false)
+
+function parseImgPos(v?: string): { x: string; y: string } {
+  if (!v || v === 'center') return { x: '50%', y: '50%' }
+  const parts = v.trim().split(/\s+/)
+  const map: Record<string, string> = { left: '0%', top: '0%', right: '100%', bottom: '100%', center: '50%' }
+  const x = map[parts[0]] ?? parts[0] ?? '50%'
+  const y = map[parts[1]] ?? parts[1] ?? '50%'
+  return { x, y }
+}
+function setImgPosX(id: string, x: string): void {
+  const el = cms.state.elements.find(e => e.id === id); if (!el) return
+  const cur = parseImgPos(el.styles.objectPosition)
+  cms.updateStyles(id, { objectPosition: `${x} ${cur.y}` })
+}
+function setImgPosY(id: string, y: string): void {
+  const el = cms.state.elements.find(e => e.id === id); if (!el) return
+  const cur = parseImgPos(el.styles.objectPosition)
+  cms.updateStyles(id, { objectPosition: `${cur.x} ${y}` })
+}
+
+function setHeightManual(id: string, v: number): void {
+  cms.updateElement(id, { height: Math.max(8, v), manualHeight: true })
+}
+
 const fillValue = computed(() => {
   const el = sel.value; if (!el) return '#FFFFFF'
   const bg = el.styles.backgroundColor
@@ -158,6 +189,15 @@ const headerLabel = computed(() => {
     </div>
 
     <div class="prop-section">
+      <div class="prop-section-title">Name</div>
+      <div class="prop-row">
+        <input class="prop-input" type="text" :placeholder="TYPE_LABELS[sel.type]"
+          :value="sel.name || ''"
+          @input="upd(sel.id, 'name', targetValue($event))" />
+      </div>
+    </div>
+
+    <div class="prop-section">
       <div class="prop-section-title">Position & Size</div>
       <div class="prop-row-pair">
         <div class="prop-row">
@@ -180,8 +220,15 @@ const headerLabel = computed(() => {
         <div class="prop-row">
           <span class="prop-label">H</span>
           <input class="prop-input" type="number" :value="Math.round(sel.height)" :min="8"
-            @input="upd(sel.id, 'height', Math.max(8, targetNumber($event)))" />
+            @input="setHeightManual(sel.id, targetNumber($event))" />
         </div>
+      </div>
+      <div v-if="sel.manualHeight && (sel.type === 'text' || sel.type === 'shape')" class="prop-row">
+        <span class="prop-label"></span>
+        <button class="btn-sm" @click="cms.setManualHeight(sel.id, false)"
+          :style="{ fontSize: '11px', padding: '3px 8px', marginLeft: 'auto' }">
+          Reset to auto height
+        </button>
       </div>
     </div>
 
@@ -223,6 +270,10 @@ const headerLabel = computed(() => {
       <div class="prop-row">
         <span class="prop-label">Style</span>
         <div class="toggle-group">
+          <button :class="['toggle-btn', { active: Number(sel.styles.fontWeight) >= 700 }]"
+            @click="sty(sel.id, 'fontWeight', Number(sel.styles.fontWeight) >= 700 ? '400' : '700')">
+            <Icon name="bold" :size="14" />
+          </button>
           <button :class="['toggle-btn', { active: sel.styles.fontStyle === 'italic' }]"
             @click="sty(sel.id, 'fontStyle', sel.styles.fontStyle === 'italic' ? 'normal' : 'italic')">
             <Icon name="italic" :size="14" />
@@ -289,6 +340,7 @@ const headerLabel = computed(() => {
       </div>
     </div>
 
+
     <div v-if="sel.type === 'image'" class="prop-section">
       <div class="prop-section-title">Image</div>
       <div class="prop-row">
@@ -305,6 +357,41 @@ const headerLabel = computed(() => {
           <option value="contain">Contain</option>
           <option value="fill">Fill</option>
         </select>
+      </div>
+      <div class="prop-row-pair">
+        <div class="prop-row">
+          <span class="prop-label" title="Horizontal offset. Accepts px or % (e.g. 100px, 50%, -20px)">X</span>
+          <input class="prop-input" type="text" placeholder="50%"
+            title="Accepts px or % (e.g. 100px, 50%, -20px)"
+            :value="parseImgPos(sel.styles.objectPosition).x"
+            @input="setImgPosX(sel.id, targetValue($event))" />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label" title="Vertical offset. Accepts px or % (e.g. 100px, 50%, -20px)">Y</span>
+          <input class="prop-input" type="text" placeholder="50%"
+            title="Accepts px or % (e.g. 100px, 50%, -20px)"
+            :value="parseImgPos(sel.styles.objectPosition).y"
+            @input="setImgPosY(sel.id, targetValue($event))" />
+        </div>
+      </div>
+      <div class="prop-hint" :style="{ marginLeft: '52px' }">Accepts px or % — negative values allowed</div>
+      <div class="prop-row-pair">
+        <div class="prop-row">
+          <span class="prop-label">H</span>
+          <div class="toggle-group" :style="{ flex: 1 }">
+            <button class="toggle-btn" title="Left" @click="setImgPosX(sel.id, '0%')">←</button>
+            <button class="toggle-btn" title="Center X" @click="setImgPosX(sel.id, '50%')">◎</button>
+            <button class="toggle-btn" title="Right" @click="setImgPosX(sel.id, '100%')">→</button>
+          </div>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">V</span>
+          <div class="toggle-group" :style="{ flex: 1 }">
+            <button class="toggle-btn" title="Top" @click="setImgPosY(sel.id, '0%')">↑</button>
+            <button class="toggle-btn" title="Center Y" @click="setImgPosY(sel.id, '50%')">◎</button>
+            <button class="toggle-btn" title="Bottom" @click="setImgPosY(sel.id, '100%')">↓</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -407,11 +494,6 @@ const headerLabel = computed(() => {
     <div v-if="sel.type === 'frame'" class="prop-section">
       <div class="prop-section-title">Frame</div>
       <div class="prop-row">
-        <span class="prop-label">Name</span>
-        <input class="prop-input" type="text" :value="sel.name || ''"
-          @input="upd(sel.id, 'name', targetValue($event))" />
-      </div>
-      <div class="prop-row">
         <span class="prop-label">Clip</span>
         <label class="prop-toggle">
           <input type="checkbox" :checked="!!sel.clipContent"
@@ -422,6 +504,129 @@ const headerLabel = computed(() => {
       <div :style="{ display: 'flex', gap: '6px', marginTop: '4px' }">
         <button class="btn-sm" @click="cms.ungroupFrame(sel.id)">Ungroup</button>
       </div>
+    </div>
+
+    <div v-if="sel.type === 'frame'" class="prop-section">
+      <div class="prop-section-title">Auto layout</div>
+      <div class="prop-row">
+        <span class="prop-label">Direction</span>
+        <div class="toggle-group">
+          <button :class="['toggle-btn', { active: (sel.layoutDirection ?? 'none') === 'none' }]"
+            title="No auto layout"
+            @click="cms.updateElement(sel.id, { layoutDirection: 'none' })">Off</button>
+          <button :class="['toggle-btn', { active: sel.layoutDirection === 'vertical' }]"
+            title="Vertical stack"
+            @click="cms.updateElement(sel.id, { layoutDirection: 'vertical' })">↓</button>
+          <button :class="['toggle-btn', { active: sel.layoutDirection === 'horizontal' }]"
+            title="Horizontal row"
+            @click="cms.updateElement(sel.id, { layoutDirection: 'horizontal' })">→</button>
+        </div>
+      </div>
+      <template v-if="(sel.layoutDirection ?? 'none') !== 'none'">
+        <div class="prop-row">
+          <span class="prop-label">Gap</span>
+          <input class="prop-input" type="number" :min="0"
+            :value="sel.layoutGap ?? 8"
+            @input="cms.updateElement(sel.id, { layoutGap: Math.max(0, targetNumber($event)) })" />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Align</span>
+          <select class="prop-select" :value="sel.layoutAlign ?? 'start'"
+            @change="cms.updateElement(sel.id, { layoutAlign: targetValue($event) as any })">
+            <option value="start">Start</option>
+            <option value="center">Center</option>
+            <option value="end">End</option>
+            <option value="stretch">Stretch</option>
+          </select>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Padding</span>
+          <button class="btn-sm"
+            :title="padSidesExpanded ? 'Use paired H/V inputs' : 'Set each side individually'"
+            :style="{ marginLeft: 'auto', padding: '3px 6px' }"
+            @click="padSidesExpanded = !padSidesExpanded">
+            {{ padSidesExpanded ? '⧉ Sides' : '⇔ H/V' }}
+          </button>
+        </div>
+        <template v-if="!padSidesExpanded">
+          <div class="prop-row-pair">
+            <div class="prop-row">
+              <span class="prop-label" title="Horizontal (left + right)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M4 4v16M20 4v16"/><path d="M4 12h4M16 12h4"/>
+                </svg>
+              </span>
+              <input class="prop-input" type="number" :min="0" placeholder="0"
+                :value="sel.styles.paddingLeft ?? sel.styles.padding ?? ''"
+                @input="setPadX(sel.id, targetNumber($event))" />
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" title="Vertical (top + bottom)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M4 4h16M4 20h16"/><path d="M12 4v4M12 16v4"/>
+                </svg>
+              </span>
+              <input class="prop-input" type="number" :min="0" placeholder="0"
+                :value="sel.styles.paddingTop ?? sel.styles.padding ?? ''"
+                @input="setPadY(sel.id, targetNumber($event))" />
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="prop-row-pair">
+            <div class="prop-row">
+              <span class="prop-label" title="Top">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M4 5h16"/><path d="M12 10v9"/><polyline points="9,13 12,10 15,13"/>
+                </svg>
+              </span>
+              <input class="prop-input" type="number" :min="0" placeholder="0"
+                :value="sel.styles.paddingTop ?? sel.styles.padding ?? ''"
+                @input="sty(sel.id, 'paddingTop', targetNumber($event))" />
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" title="Right">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M19 4v16"/><path d="M14 12H5"/><polyline points="11,9 14,12 11,15"/>
+                </svg>
+              </span>
+              <input class="prop-input" type="number" :min="0" placeholder="0"
+                :value="sel.styles.paddingRight ?? sel.styles.padding ?? ''"
+                @input="sty(sel.id, 'paddingRight', targetNumber($event))" />
+            </div>
+          </div>
+          <div class="prop-row-pair">
+            <div class="prop-row">
+              <span class="prop-label" title="Bottom">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M4 19h16"/><path d="M12 5v9"/><polyline points="9,11 12,14 15,11"/>
+                </svg>
+              </span>
+              <input class="prop-input" type="number" :min="0" placeholder="0"
+                :value="sel.styles.paddingBottom ?? sel.styles.padding ?? ''"
+                @input="sty(sel.id, 'paddingBottom', targetNumber($event))" />
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" title="Left">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <path d="M5 4v16"/><path d="M10 12h9"/><polyline points="13,9 10,12 13,15"/>
+                </svg>
+              </span>
+              <input class="prop-input" type="number" :min="0" placeholder="0"
+                :value="sel.styles.paddingLeft ?? sel.styles.padding ?? ''"
+                @input="sty(sel.id, 'paddingLeft', targetNumber($event))" />
+            </div>
+          </div>
+        </template>
+        <div class="prop-row">
+          <span class="prop-label">Grow</span>
+          <label class="prop-toggle">
+            <input type="checkbox" :checked="!!sel.layoutGrow"
+              @change="cms.updateElement(sel.id, { layoutGrow: ($event.target as HTMLInputElement).checked })" />
+            <span>Fit content</span>
+          </label>
+        </div>
+      </template>
     </div>
 
     <div class="prop-section">

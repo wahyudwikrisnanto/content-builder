@@ -4,6 +4,7 @@ import type { CSSProperties } from 'vue'
 import hljs from 'highlight.js/lib/common'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useCms } from '../composables/useCms'
+import { paddingValue } from '../composables/styleHelpers'
 import Icon from '../icons/Icon.vue'
 import type { CmsElement } from '../types'
 
@@ -48,7 +49,7 @@ const codeStyle = computed<CSSProperties>(() => {
   return {
     flex: 1,
     margin: 0,
-    padding: (s.padding ?? 14) + 'px',
+    padding: paddingValue(s) ?? ((s.padding ?? 14) + 'px'),
     fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
     fontSize: (s.fontSize ?? 13) + 'px',
     lineHeight: s.lineHeight ?? 1.55,

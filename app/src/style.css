@@ -287,6 +287,51 @@
 }
 .cb-root .canvas-el-frame-label:active { cursor: grabbing; }
 
+/* Box-model padding control (used inside Auto-layout section) */
+.cb-root .box-model--pad-only {
+  position: relative;
+  flex: 1;
+  background: #EEF2FF;
+  border: 1px dashed #A5B4FC;
+  border-radius: var(--cb-r-sm);
+  padding: 24px 36px;
+  min-height: 70px;
+}
+.cb-root .box-model--pad-only .box-core {
+  background: #FFFFFF;
+  border: 1px solid var(--cb-border);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 10px;
+  color: var(--cb-text-3);
+  text-align: center;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  user-select: none;
+}
+.cb-root .box-model--pad-only .box-input {
+  position: absolute;
+  width: 34px;
+  padding: 2px 0;
+  text-align: center;
+  border: 1px solid var(--cb-border);
+  border-radius: 3px;
+  background: #FFFFFF;
+  font-size: 11px;
+  font-family: inherit;
+  color: var(--cb-text-1);
+  outline: none;
+}
+.cb-root .box-model--pad-only .box-input:focus { border-color: var(--cb-selection); }
+.cb-root .box-model--pad-only .box-input::-webkit-outer-spin-button,
+.cb-root .box-model--pad-only .box-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cb-root .box-model--pad-only .box-input { -moz-appearance: textfield; }
+.cb-root .box-model--pad-only .box-pt { top: 3px;    left: 50%; transform: translateX(-50%); }
+.cb-root .box-model--pad-only .box-pr { right: 3px;  top: 50%;  transform: translateY(-50%); }
+.cb-root .box-model--pad-only .box-pb { bottom: 3px; left: 50%; transform: translateX(-50%); }
+.cb-root .box-model--pad-only .box-pl { left: 3px;   top: 50%;  transform: translateY(-50%); }
+
+
 /* Fixed/viewport elements still need global scope since they escape the root */
 .canvas-marquee-fixed {
   position: fixed; pointer-events: none; z-index: 9998;

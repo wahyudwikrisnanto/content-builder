@@ -107,10 +107,12 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       return
     }
     const siblings = cms.state.elements.filter(e => e.id !== target.id && cms.isEffectivelyVisible(e.id))
+    const parentBox = cms.parentInnerBox(target)
     const snap = computeSnap(
       { x: rawX, y: rawY, width: target.width, height: target.height },
       siblings, cms.state.canvasWidth, cms.effectiveHeight.value,
       6 / z,
+      parentBox ?? undefined,
     )
     cms.setGuides(snap.guides)
     cms.move(target.id, snap.x, snap.y)
@@ -121,6 +123,14 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     cms.clearGuides()
     if (moved) {
       if (!groupIds) cms.autoReparent(target.id)
+      // Reflow parent auto-layout frame after drag (snaps child into new order)
+      const cur = cms.state.elements.find(e => e.id === target.id)
+      if (cur?.parentId) {
+        const parent = cms.state.elements.find(e => e.id === cur.parentId)
+        if (parent?.type === 'frame' && (parent.layoutDirection ?? 'none') !== 'none') {
+          cms.reflowFrame(parent.id)
+        }
+      }
       cms.pushSnapshot(prev)
     }
   }

@@ -66,10 +66,12 @@ const layerTree = computed<LayerNode[]>(() => {
 })
 
 function layerName(el: CmsElement): string {
+  // Explicit user name wins for every element type
+  if (el.name) return el.name
   if (el.type === 'text') return (el.content || '').slice(0, 24) || 'Text'
   if (el.type === 'button') return (el.content || '').slice(0, 24) || 'Button'
   if (el.type === 'shape') return el.shapeType === 'circle' ? 'Circle' : el.shapeType === 'line' ? 'Line' : 'Rectangle'
-  if (el.type === 'frame') return el.name || 'Frame'
+  if (el.type === 'frame') return 'Frame'
   return el.type.charAt(0).toUpperCase() + el.type.slice(1)
 }
 

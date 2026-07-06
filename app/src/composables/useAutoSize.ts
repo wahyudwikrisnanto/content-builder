@@ -3,9 +3,9 @@ import { useCms } from './useCms'
 import type { CmsElement } from '../types'
 
 /**
- * Auto-grow element height to fit measured content's scrollHeight.
+ * Auto-size element height to fit measured content's scrollHeight.
  * `getNode()` returns the DOM node whose scrollHeight reflects natural content.
- * Only grows — never shrinks (user keeps manual downward sizing).
+ * Grows AND shrinks so the container always hugs the content.
  */
 export function useAutoSize(
   element: Ref<CmsElement>,
@@ -22,9 +22,11 @@ export function useAutoSize(
     const node = getNode()
     const el = element.value
     if (!node || !el) return
-    const needH = node.scrollHeight
-    if (needH > el.height + EPS) {
-      cms.updateElement(el.id, { height: Math.ceil(needH) }, { noHistory: true })
+    // Manual height: don't touch the box at all — user is in control.
+    if (el.manualHeight) return
+    const needH = Math.ceil(node.scrollHeight)
+    if (Math.abs(needH - el.height) > EPS) {
+      cms.updateElement(el.id, { height: needH }, { noHistory: true })
     }
   }
 

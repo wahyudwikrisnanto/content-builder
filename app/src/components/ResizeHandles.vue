@@ -29,6 +29,12 @@ function start(e: MouseEvent, hid: HandleId): void {
   const startX = e.clientX, startY = e.clientY
   const orig = { x: props.element.x, y: props.element.y, w: props.element.width, h: props.element.height }
   const prev = cloneEl(cms.state.elements)
+  const touchesVertical = hid.includes('n') || hid.includes('s')
+  // Set manualHeight IMMEDIATELY via direct state mutation so useAutoSize honors it during drag.
+  // (Going through updateElement would fire a parent-reflow that snaps back.)
+  if (touchesVertical) {
+    cms.setManualHeight(props.element.id, true)
+  }
 
   const onMove = (ev: MouseEvent): void => {
     const dx = (ev.clientX - startX) / z
@@ -50,7 +56,9 @@ function start(e: MouseEvent, hid: HandleId): void {
     }
     const siblings = cms.state.elements.filter(e => e.id !== props.element.id && cms.isEffectivelyVisible(e.id))
     const threshold = 6 / z
-    const snap = computeSnap({ x, y, width: w, height: h }, siblings, cms.state.canvasWidth, cms.effectiveHeight.value, threshold)
+    // Snap to parent frame's inner padding zone if this element is a child
+    const parentBox = cms.parentInnerBox(props.element)
+    const snap = computeSnap({ x, y, width: w, height: h }, siblings, cms.state.canvasWidth, cms.effectiveHeight.value, threshold, parentBox ?? undefined)
     // Only apply snap on the edge being dragged, preserve opposite edge
     const sdx = snap.x - x
     const sdy = snap.y - y
@@ -67,6 +75,16 @@ function start(e: MouseEvent, hid: HandleId): void {
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
     cms.clearGuides()
+    // If child of an auto-layout frame, reflow so siblings shift after resize.
+    // Own axis-locked dims (main-axis cursor position, cross-axis stretch)
+    // will be re-applied — that's expected: the user picked stretch/etc.
+    const cur = cms.state.elements.find(e => e.id === props.element.id)
+    if (cur?.parentId) {
+      const parent = cms.state.elements.find(e => e.id === cur.parentId)
+      if (parent?.type === 'frame' && (parent.layoutDirection ?? 'none') !== 'none') {
+        cms.reflowFrame(parent.id)
+      }
+    }
     cms.pushSnapshot(prev)
   }
   document.addEventListener('mousemove', onMove)

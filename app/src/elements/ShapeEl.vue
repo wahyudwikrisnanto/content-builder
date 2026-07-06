@@ -4,6 +4,7 @@ import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
+import { paddingValue } from '../composables/styleHelpers'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -44,7 +45,7 @@ const textStyle = computed<CSSProperties>(() => {
   const s = props.element.styles
   return {
     width: '100%',
-    padding: (s.padding ?? 8) + 'px',
+    padding: paddingValue(s) ?? ((s.padding ?? 8) + 'px'),
     fontSize: (s.fontSize ?? 14) + 'px',
     fontWeight: s.fontWeight as CSSProperties['fontWeight'],
     fontStyle: s.fontStyle,

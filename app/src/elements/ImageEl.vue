@@ -11,6 +11,7 @@ void props
     <img v-if="element.content && !element.content.startsWith('data:')"
       :src="element.content" alt="" draggable="false"
       :style="{ width: '100%', height: '100%', objectFit: element.styles.objectFit || 'cover',
+                objectPosition: element.styles.objectPosition || 'center',
                 borderRadius: element.styles.borderRadius + 'px', display: 'block' }" />
     <div v-else class="img-placeholder">
       <Icon name="image" :size="28" :style="{ opacity: 0.4 }" />

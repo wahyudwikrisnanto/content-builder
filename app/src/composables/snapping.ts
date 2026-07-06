@@ -39,12 +39,17 @@ export function computeSnap(
   canvasWidth: number,
   canvasHeight: number,
   threshold = SNAP_THRESHOLD,
+  parentBox?: { x: number; y: number; width: number; height: number },
 ): SnapResult {
   const me = elEdges(moving)
   const targets: { edges: EdgeSet; bbox: { x: number; y: number; width: number; height: number } }[] = [
     { edges: canvasEdges(canvasWidth, canvasHeight), bbox: { x: 0, y: 0, width: canvasWidth, height: canvasHeight } },
     ...siblings.map(s => ({ edges: elEdges(s), bbox: { x: s.x, y: s.y, width: s.width, height: s.height } })),
   ]
+  // Snap to parent frame's inner padding box (edges + centers)
+  if (parentBox) {
+    targets.push({ edges: elEdges(parentBox), bbox: parentBox })
+  }
 
   let dx = 0, dy = 0
   let bestX = threshold + 1, bestY = threshold + 1

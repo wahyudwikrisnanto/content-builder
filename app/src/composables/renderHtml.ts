@@ -40,6 +40,11 @@ function computeClipInset(el: CmsElement): string {
   return `clip-path:inset(${top}px ${right}px ${bottom}px ${left}px)`
 }
 
+// Debug attrs shown on every rendered outer div — inspect in devtools
+function dbg(el: CmsElement): string {
+  return `data-cms-type="${el.type}" data-cms-id="${el.id}"${el.name ? ` data-cms-name="${escape(el.name)}"` : ''}`
+}
+
 function commonBoxStyle(el: CmsElement): string {
   const s = el.styles
   const opacity = s.opacity != null ? s.opacity : 1
@@ -53,6 +58,17 @@ function commonBoxStyle(el: CmsElement): string {
   ].filter(Boolean).join(';')
 }
 
+// Resolve padding: per-side overrides the shorthand
+function paddingCss(s: ElementStyles): string {
+  const base = s.padding
+  const t = s.paddingTop ?? base
+  const r = s.paddingRight ?? base
+  const b = s.paddingBottom ?? base
+  const l = s.paddingLeft ?? base
+  if (t == null && r == null && b == null && l == null) return ''
+  return `padding:${t ?? 0}px ${r ?? 0}px ${b ?? 0}px ${l ?? 0}px`
+}
+
 function textCss(s: ElementStyles, extra: Record<string, string> = {}): string {
   const parts: string[] = []
   if (s.fontSize != null) parts.push(`font-size:${s.fontSize}px`)
@@ -63,7 +79,7 @@ function textCss(s: ElementStyles, extra: Record<string, string> = {}): string {
   if (s.textAlign) parts.push(`text-align:${s.textAlign}`)
   if (s.lineHeight != null) parts.push(`line-height:${s.lineHeight}`)
   if (s.letterSpacing != null) parts.push(`letter-spacing:${s.letterSpacing}px`)
-  if (s.padding != null) parts.push(`padding:${s.padding}px`)
+  const pad = paddingCss(s); if (pad) parts.push(pad)
   if (s.textStrokeWidth) {
     parts.push(`-webkit-text-stroke-width:${s.textStrokeWidth}px`)
     parts.push(`-webkit-text-stroke-color:${s.textStrokeColor || '#000'}`)
@@ -95,20 +111,22 @@ function renderText(el: CmsElement): string {
     ? `<div style="white-space:pre-wrap">${escape(el.content || '')}</div>`
     : renderListBody(el.content || '', listType)
   const style = textCss(s, {
-    width: '100%', height: '100%',
-    'word-wrap': 'break-word', overflow: 'hidden',
+    width: '100%',
+    'min-height': '100%',
+    'box-sizing': 'border-box',
+    'word-wrap': 'break-word',
     'background-color': s.backgroundColor === 'transparent' ? 'transparent' : (s.backgroundColor || 'transparent'),
     'border-radius': px(s.borderRadius),
     'font-family': 'inherit',
   })
-  return `<div style="${commonBoxStyle(el)}"><div style="${style}">${inner}</div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${style}">${inner}</div></div>`
 }
 
 function renderImage(el: CmsElement): string {
   const s = el.styles
   const src = el.content?.startsWith('data:') ? '' : el.content
-  if (!src) return `<div style="${commonBoxStyle(el)};${boxCss(s)}"></div>`
-  return `<div style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};border-radius:${s.borderRadius || 0}px"/></div>`
+  if (!src) return `<div ${dbg(el)} style="${commonBoxStyle(el)};${boxCss(s)}"></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${s.borderRadius || 0}px"/></div>`
 }
 
 function renderShape(el: CmsElement): string {
@@ -119,28 +137,28 @@ function renderShape(el: CmsElement): string {
   const textInner = listType === 'none'
     ? `<div style="${textCss(s, { width: '100%', 'white-space': 'pre-wrap', 'font-family': 'inherit' })}">${escape(el.content || '')}</div>`
     : `<div style="${textCss(s, { width: '100%', 'font-family': 'inherit' })}">${renderListBody(el.content || '', listType)}</div>`
-  return `<div style="${commonBoxStyle(el)}"><div style="${box}">${textInner}</div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${box}">${textInner}</div></div>`
 }
 
 function renderVideo(el: CmsElement): string {
   const s = el.styles
   if (!el.content) {
-    return `<div style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background:#18181B;border-radius:${s.borderRadius || 0}px"></div></div>`
+    return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background:#18181B;border-radius:${s.borderRadius || 0}px"></div></div>`
   }
   let src = el.content
   if (src.includes('youtube.com/watch')) src = src.replace('watch?v=', 'embed/')
   if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/')
-  return `<div style="${commonBoxStyle(el)}"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${s.borderRadius || 0}px"></iframe></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${s.borderRadius || 0}px"></iframe></div>`
 }
 
 function renderDivider(el: CmsElement): string {
   const s = el.styles
-  return `<div style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#DDD'};border-radius:${s.borderRadius || 0}px;opacity:${s.opacity ?? 1}"></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#DDD'};border-radius:${s.borderRadius || 0}px;opacity:${s.opacity ?? 1}"></div></div>`
 }
 
 function renderContainer(el: CmsElement): string {
   const s = el.styles
-  return `<div style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;${boxCss(s)}"></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;${boxCss(s)}"></div></div>`
 }
 
 function renderFrame(el: CmsElement): string {
@@ -148,7 +166,7 @@ function renderFrame(el: CmsElement): string {
   const clip = el.clipContent ? 'overflow:hidden;' : ''
   const bw = s.borderWidth ?? 0
   const border = bw > 0 ? `border:${bw}px solid ${s.borderColor || '#D4D4D4'};` : ''
-  return `<div style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${s.borderRadius || 0}px;${border}"></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${s.borderRadius || 0}px;${border}"></div></div>`
 }
 
 function renderButton(el: CmsElement): string {
@@ -172,9 +190,9 @@ function renderButton(el: CmsElement): string {
   const label = escape(el.content || '')
   if (el.href) {
     const target = el.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : ''
-    return `<a href="${escape(el.href)}"${target} style="${commonBoxStyle(el)};text-decoration:none"><div style="${baseStyle}">${label}</div></a>`
+    return `<a ${dbg(el)} href="${escape(el.href)}"${target} style="${commonBoxStyle(el)};text-decoration:none"><div style="${baseStyle}">${label}</div></a>`
   }
-  return `<div style="${commonBoxStyle(el)}"><div style="${baseStyle}">${label}</div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${baseStyle}">${label}</div></div>`
 }
 
 function renderCode(el: CmsElement): string {
@@ -211,7 +229,7 @@ function renderCode(el: CmsElement): string {
     `line-height:${s.lineHeight ?? 1.55}`,
     'background:transparent', 'white-space:pre', 'overflow:auto', 'tab-size:2',
   ].join(';')
-  return `<div style="${commonBoxStyle(el)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
 }
 
 function renderInput(el: CmsElement): string {
@@ -250,7 +268,7 @@ function renderInput(el: CmsElement): string {
     inner = `${labelHtml}<input type="${escape(t)}" placeholder="${escape(el.placeholder || '')}" style="${fieldStyle}"${el.required ? ' required' : ''}/>`
   }
 
-  return `<div style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
 }
 
 const RENDERERS: Record<string, (el: CmsElement) => string> = {
@@ -324,29 +342,30 @@ function flowTextCss(s: ElementStyles): string {
   return parts.join(';')
 }
 
-// Detect whether element is left/center/right within canvasW and return
-// the appropriate margin CSS so alignment is preserved when container shrinks.
-function flowWrap(el: CmsElement, mt: number, canvasW: number): string {
-  const leftGap = el.x
-  const rightGap = canvasW - el.x - el.width
-  // tolerance: within 2px or 0.5% of canvas width
-  const tol = Math.max(2, canvasW * 0.005)
+// Module-level flag: when true, flowWrap skips alignment math (used inside flex parents)
+let _autoFlex = 0
 
+function flowWrap(el: CmsElement, mt: number, canvasW: number): string {
   const base = [
     mt ? `margin-top:${mt}px` : '',
     `width:${el.width}px`,
+    `max-width:100%`,
     `box-sizing:border-box`,
-    `overflow:hidden`,
   ]
 
+  if (_autoFlex > 0) {
+    return base.filter(Boolean).join(';')
+  }
+
+  const leftGap = el.x
+  const rightGap = canvasW - el.x - el.width
+  const tol = Math.max(2, canvasW * 0.005)
+
   if (Math.abs(leftGap - rightGap) <= tol) {
-    // centered — margin auto both sides, clamp to full width
-    base.push(`margin-left:auto`, `margin-right:auto`, `max-width:100%`)
+    base.push(`margin-left:auto`, `margin-right:auto`)
   } else if (rightGap <= leftGap) {
-    // right-aligned — anchor to right edge
     base.push(`margin-left:auto`, `margin-right:${rightGap}px`, `max-width:calc(100% - ${rightGap}px)`)
   } else {
-    // left-aligned — anchor to left edge
     base.push(`margin-left:${leftGap}px`, `max-width:calc(100% - ${leftGap}px)`)
   }
 
@@ -360,19 +379,20 @@ function flowRenderText(el: CmsElement, mt: number, cw: number): string {
   const wrap = flowWrap(el, mt, cw)
   if (lt === 'bullet') {
     const items = (el.content || '').split('\n').map(l => `<li>${escape(l)}</li>`).join('')
-    return `<div style="${wrap}"><ul style="${inner_css};margin:0;padding-left:1.5em">${items}</ul></div>`
+    return `<div ${dbg(el)} style="${wrap}"><ul style="${inner_css};margin:0;padding-left:1.5em">${items}</ul></div>`
   }
   if (lt === 'number') {
     const items = (el.content || '').split('\n').map(l => `<li>${escape(l)}</li>`).join('')
-    return `<div style="${wrap}"><ol style="${inner_css};margin:0;padding-left:1.5em">${items}</ol></div>`
+    return `<div ${dbg(el)} style="${wrap}"><ol style="${inner_css};margin:0;padding-left:1.5em">${items}</ol></div>`
   }
-  return `<div style="${wrap}"><div style="${inner_css};white-space:pre-wrap">${escape(el.content || '')}</div></div>`
+  return `<div ${dbg(el)} style="${wrap}"><div style="${inner_css};white-space:pre-wrap">${escape(el.content || '')}</div></div>`
 }
 
 function flowRenderImage(el: CmsElement, mt: number, cw: number): string {
   const s = el.styles
   if (!el.content) return ''
-  return `<div style="${flowWrap(el, mt, cw)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:auto;display:block;object-fit:${s.objectFit || 'cover'};border-radius:${s.borderRadius || 0}px"/></div>`
+  const ar = el.width && el.height ? `aspect-ratio:${el.width}/${el.height}` : ''
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:100%;${ar};display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${s.borderRadius || 0}px"/></div>`
 }
 
 function flowRenderShape(el: CmsElement, mt: number, cw: number): string {
@@ -384,7 +404,7 @@ function flowRenderShape(el: CmsElement, mt: number, cw: number): string {
     : lt === 'number'
     ? `<ol style="${inner_css};margin:0;padding-left:1.5em">${(el.content || '').split('\n').map(l => `<li>${escape(l)}</li>`).join('')}</ol>`
     : `<div style="${inner_css};white-space:pre-wrap">${escape(el.content || '')}</div>`
-  return `<div style="${flowWrap(el, mt, cw)}">${inner}</div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}">${inner}</div>`
 }
 
 function flowRenderVideo(el: CmsElement, mt: number, cw: number): string {
@@ -419,7 +439,7 @@ function flowRenderButton(el: CmsElement, mt: number, cw: number): string {
   const link = el.href
     ? `<a href="${escape(el.href)}"${el.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : ''} style="${btnStyle}">${label}</a>`
     : `<span style="${btnStyle}">${label}</span>`
-  return `<div style="${flowWrap(el, mt, cw)}">${link}</div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}">${link}</div>`
 }
 
 function flowRenderCode(el: CmsElement, mt: number, cw: number): string {
@@ -444,7 +464,46 @@ function flowRenderCode(el: CmsElement, mt: number, cw: number): string {
     ${el.copyEnabled !== false ? `<button data-code-copy style="margin-left:auto;display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:4px;background:transparent;border:none;color:rgba(255,255,255,0.55);font-size:11px;font-family:inherit;cursor:pointer">Copy</button>` : ''}
   </div>`
   const preStyle = `margin:0;padding:${s.padding ?? 14}px;font-family:'SF Mono','Fira Code','Cascadia Code',Menlo,Consolas,monospace;font-size:${s.fontSize ?? 13}px;line-height:${s.lineHeight ?? 1.55};background:transparent;white-space:pre;overflow:auto;tab-size:2`
-  return `<div style="${flowWrap(el, mt, cw)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
+}
+
+function flowRenderInput(el: CmsElement, mt: number, cw: number): string {
+  const s = el.styles
+  const t = el.inputType || 'text'
+  const labelHtml = el.inputLabel
+    ? `<label style="display:block;font-size:${s.fontSize ?? 14}px;font-weight:500;color:${s.color || '#374151'};font-family:inherit;margin-bottom:4px">${escape(el.inputLabel)}${el.required ? '<span style="color:#ef4444"> *</span>' : ''}</label>`
+    : ''
+  const fieldStyle = [
+    'width:100%', 'font-family:inherit',
+    `font-size:${s.fontSize ?? 14}px`,
+    `color:${s.color || '#222'}`,
+    `background-color:${s.backgroundColor || '#fff'}`,
+    `border:${s.borderWidth ?? 1}px solid ${s.borderColor || '#D1D5DB'}`,
+    `border-radius:${s.borderRadius ?? 6}px`,
+    `padding:${s.padding ?? 10}px`,
+    'box-sizing:border-box', 'outline:none',
+  ].join(';')
+
+  let inner = ''
+  if (t === 'textarea') {
+    const h = Math.max(60, el.height - (el.inputLabel ? 24 : 0))
+    inner = `${labelHtml}<textarea placeholder="${escape(el.placeholder || '')}" style="${fieldStyle};height:${h}px;resize:vertical"${el.required ? ' required' : ''}></textarea>`
+  } else if (t === 'select') {
+    const opts = (el.inputOptions || '').split('\n').map(o => o.trim()).filter(Boolean)
+      .map(o => `<option value="${escape(o)}">${escape(o)}</option>`).join('')
+    const placeholderOpt = el.placeholder ? `<option value="" disabled selected>${escape(el.placeholder)}</option>` : ''
+    inner = `${labelHtml}<select style="${fieldStyle};cursor:pointer"${el.required ? ' required' : ''}>${placeholderOpt}${opts}</select>`
+  } else if (t === 'checkbox') {
+    inner = `<label style="display:flex;align-items:center;gap:8px;font-size:${s.fontSize ?? 14}px;color:${s.color || '#222'};font-family:inherit;cursor:pointer"><input type="checkbox"${el.required ? ' required' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:#2563eb"/><span>${escape(el.inputLabel || 'Checkbox')}</span>${el.required ? '<span style="color:#ef4444">*</span>' : ''}</label>`
+  } else if (t === 'radio') {
+    const opts = (el.inputOptions || '').split('\n').map(o => o.trim()).filter(Boolean)
+      .map(o => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="radio" name="${escape(el.id)}" value="${escape(o)}" style="width:15px;height:15px;accent-color:#2563eb"/><span>${escape(o)}</span></label>`).join('')
+    inner = `<div style="display:flex;flex-direction:column;gap:6px;font-size:${s.fontSize ?? 14}px;color:${s.color || '#222'};font-family:inherit">${opts}</div>`
+  } else {
+    inner = `${labelHtml}<input type="${escape(t)}" placeholder="${escape(el.placeholder || '')}" style="${fieldStyle}"${el.required ? ' required' : ''}/>`
+  }
+
+  return `<div style="${flowWrap(el, mt, cw)};opacity:${s.opacity ?? 1}">${inner}</div>`
 }
 
 export function renderFlowHtml(payload: RenderPayload): string {
@@ -474,39 +533,106 @@ export function renderFlowHtml(payload: RenderPayload): string {
     if (el.type === 'divider') return flowRenderDivider(el, mt, cw)
     if (el.type === 'button') return flowRenderButton(el, mt, cw)
     if (el.type === 'code') return flowRenderCode(el, mt, cw)
+    if (el.type === 'input') return flowRenderInput(el, mt, cw)
     if (el.type === 'frame' || el.type === 'container') {
       const s = el.styles
-      const boxStyle = [
+      const clip = el.type === 'frame' && el.clipContent
+      const dir = el.type === 'frame' ? (el.layoutDirection ?? 'none') : 'none'
+      const autoLayout = dir !== 'none'
+
+      // Padding: read per-side (shorthand fallback), then reduce inner width for children
+      const base = s.padding
+      const pt = s.paddingTop    ?? base ?? 0
+      const pr = s.paddingRight  ?? base ?? 0
+      const pb = s.paddingBottom ?? base ?? 0
+      const pl = s.paddingLeft   ?? base ?? 0
+
+      const boxParts = [
         flowWrap(el, mt, cw),
         s.backgroundColor && s.backgroundColor !== 'transparent' ? `background-color:${s.backgroundColor}` : '',
         s.borderRadius != null ? `border-radius:${s.borderRadius}px` : '',
         s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}` : '',
-        s.padding != null ? `padding:${s.padding}px` : '',
-      ].filter(Boolean).join(';')
+        (pt || pr || pb || pl) ? `padding:${pt}px ${pr}px ${pb}px ${pl}px` : '',
+        clip ? `height:${el.height}px;overflow:hidden` : '',
+      ]
+
       const children = childrenOf(el.id)
-      const parts: string[] = []
-      let prevBottom = el.y
-      for (const child of children) {
-        const relEl = { ...child, x: child.x - el.x, y: child.y - el.y }
-        const childMt = Math.max(0, relEl.y - (prevBottom - el.y))
-        parts.push(renderNode(relEl as CmsElement, childMt, el.width))
-        prevBottom = child.y + child.height
+      const innerW = Math.max(0, el.width - pl - pr)
+
+      // Auto-layout: use native flexbox with the frame's gap
+      if (autoLayout) {
+        const gap = el.layoutGap ?? 8
+        const align = el.layoutAlign ?? 'start'
+        const flexAlign = align === 'stretch' ? 'stretch'
+          : align === 'center' ? 'center'
+          : align === 'end' ? 'flex-end'
+          : 'flex-start'
+        boxParts.push(
+          'display:flex',
+          `flex-direction:${dir === 'vertical' ? 'column' : 'row'}`,
+          `gap:${gap}px`,
+          `align-items:${flexAlign}`,
+        )
+        const parts: string[] = []
+        _autoFlex++
+        try {
+          for (const child of children) {
+            const relEl = { ...child, x: 0, y: 0 }
+            parts.push(renderNode(relEl as CmsElement, 0, innerW))
+          }
+        } finally {
+          _autoFlex--
+        }
+        return `<div ${dbg(el)} style="${boxParts.filter(Boolean).join(';')}">${parts.join('\n')}</div>`
       }
-      return `<div style="${boxStyle}">${parts.join('\n')}</div>`
+
+      // Free-layout: use flexbox column with per-item gap derived from the child's Y position.
+      // Preserves per-child horizontal alignment (via flowWrap) while making vertical spacing
+      // predictable and frame-relative — never canvas-relative.
+      boxParts.push('display:flex', 'flex-direction:column')
+      const parts: string[] = []
+      _autoFlex++   // suppress inner flowWrap alignment (parent decides via item's margin)
+      try {
+        // Sort by Y so document order matches visual stack order
+        const sorted = [...children].sort((a, b) => a.y - b.y)
+        let prevBottom = -1
+        for (const child of sorted) {
+          const relY = child.y - el.y - pt        // 0-based within padding zone
+          const relX = child.x - el.x - pl
+          const relEl = { ...child, x: relX, y: relY }
+          const gap = prevBottom < 0 ? 0 : Math.max(0, relY - prevBottom)
+          // We're inside flex column, so alignment via margin-left auto:
+          const rightGap = innerW - relX - child.width
+          const alignCss = (() => {
+            const tol = Math.max(2, innerW * 0.005)
+            if (Math.abs(relX - rightGap) <= tol) return 'align-self:center'
+            if (rightGap < relX) return `align-self:flex-end;margin-right:${Math.max(0, rightGap)}px`
+            return `align-self:flex-start;margin-left:${Math.max(0, relX)}px`
+          })()
+          const inner = renderNode(relEl as CmsElement, 0, innerW)
+          parts.push(`<div style="${gap ? `margin-top:${gap}px;` : ''}${alignCss};max-width:100%">${inner}</div>`)
+          prevBottom = relY + child.height
+        }
+      } finally {
+        _autoFlex--
+      }
+      return `<div ${dbg(el)} style="${boxParts.filter(Boolean).join(';')}">${parts.join('\n')}</div>`
     }
     return ''
   }
 
   const roots = childrenOf(null)
   const parts: string[] = []
-  let prevBottom = 0
+  let prevBottom = -1
   for (const el of roots) {
-    const mt = Math.max(0, el.y - prevBottom)
+    // First element: no top margin. Otherwise: gap between elements (canvas Y difference).
+    const mt = prevBottom < 0 ? 0 : Math.max(0, el.y - prevBottom)
     parts.push(renderNode(el, mt, canvasW))
     prevBottom = el.y + el.height
   }
 
-  return `<div class="content-render-flow" style="position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
+  // `display:flow-root` establishes a BFC — prevents child margins from collapsing into this container
+  return `<div class="content-render-flow" style="display:flow-root;position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
 }
 
 export function bindCopyButtons(root: HTMLElement): () => void {

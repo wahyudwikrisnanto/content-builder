@@ -3,6 +3,7 @@ import { ref, watch, nextTick, computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { textStrokeStyle } from '../composables/textStroke'
+import { paddingValue } from '../composables/styleHelpers'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -16,7 +17,7 @@ const btnStyle = computed<CSSProperties>(() => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: s.textAlign === 'left' ? 'flex-start' : s.textAlign === 'right' ? 'flex-end' : 'center',
-    padding: (s.padding ?? 10) + 'px',
+    padding: paddingValue(s) ?? ((s.padding ?? 10) + 'px'),
     backgroundColor: s.backgroundColor || '#2563EB',
     color: s.color || '#FFFFFF',
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
