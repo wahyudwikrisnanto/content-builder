@@ -268,20 +268,24 @@
 .cb-root .canvas-el-frame-label {
   position: absolute;
   left: 0;
-  top: -18px;
+  top: -20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   color: var(--cb-text-2);
   font-weight: 500;
   user-select: none;
   white-space: nowrap;
-  cursor: pointer;
-  padding: 2px 4px;
+  cursor: grab;
+  padding: 2px 6px;
   border-radius: 3px;
 }
 .cb-root .canvas-el-frame-label:hover {
   color: var(--cb-selection);
   background: var(--cb-selection-light);
 }
+.cb-root .canvas-el-frame-label:active { cursor: grabbing; }
 
 /* Fixed/viewport elements still need global scope since they escape the root */
 .canvas-marquee-fixed {

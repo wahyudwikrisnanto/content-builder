@@ -2,55 +2,77 @@
 import { ref, useTemplateRef, h, defineComponent } from 'vue'
 import ContentBuilder from './ContentBuilder.vue'
 import ContentRenderer from './ContentRenderer.vue'
-import type { CmsPlugin } from './composables/usePlugins'
+import { openDialog } from './composables/openDialog'
+import type { CmsPlugin, ActivatorPlugin } from './composables/usePlugins'
 import type { BuilderConfig, CmsElement } from './types'
 import './style.css'
 import './dev.css'
 
-// --- Plugin 1: custom renderer for "button" elements using h() ---
-const FancyButtonRenderer = defineComponent({
-  props: { element: { type: Object as () => CmsElement, required: true } },
-  setup(props) {
+// Example: custom image picker dialog defined right here in App.
+// Replace this with your own component (a media library, Unsplash picker, etc.)
+const MyImagePickerDialog = defineComponent({
+  emits: ['confirm', 'close'],
+  setup(_, { emit }) {
+    const url = ref('')
+    // Demo URLs to simulate a "media library"
+    const SAMPLES = [
+      'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?w=800',
+      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800',
+      'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=800',
+    ]
     return () => h('div', {
-      style: {
-        width: '100%', height: '100%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-        borderRadius: '12px',
-        boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: (props.element.styles.fontSize ?? 14) + 'px',
-        fontFamily: 'inherit',
-        cursor: 'pointer',
-      },
+      style: 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99999',
+      onMousedown: (e: MouseEvent) => { if (e.target === e.currentTarget) emit('close') },
     }, [
-      h('span', { style: { marginRight: '6px' } }, '✦'),
-      props.element.content || 'Button',
+      h('div', { style: 'background:#fff;border-radius:12px;padding:24px;width:480px;max-width:92vw;font-family:system-ui,sans-serif' }, [
+        h('h3', { style: 'margin:0 0 16px;font-size:15px;font-weight:600' }, 'Pick an image'),
+        // Sample thumbnails
+        h('div', { style: 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px' },
+          SAMPLES.map(src =>
+            h('img', {
+              src, alt: '', draggable: false,
+              style: `width:100%;height:90px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid ${url.value === src ? '#2563EB' : 'transparent'}`,
+              onClick: () => { url.value = src },
+            })
+          )
+        ),
+        // Manual URL input
+        h('input', {
+          value: url.value,
+          placeholder: 'Or paste a URL…',
+          style: 'width:100%;padding:8px 10px;border:1.5px solid #D1D5DB;border-radius:7px;font-size:13px;box-sizing:border-box;outline:none',
+          onInput: (e: Event) => { url.value = (e.target as HTMLInputElement).value },
+        }),
+        // Actions
+        h('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:16px' }, [
+          h('button', {
+            style: 'padding:7px 14px;border-radius:7px;border:1px solid #D1D5DB;background:#fff;font-size:13px;cursor:pointer',
+            onClick: () => emit('close'),
+          }, 'Cancel'),
+          h('button', {
+            style: `padding:7px 14px;border-radius:7px;border:none;background:#2563EB;color:#fff;font-size:13px;cursor:pointer;opacity:${url.value.trim() ? 1 : 0.4}`,
+            disabled: !url.value.trim(),
+            onClick: () => { if (url.value.trim()) emit('confirm', url.value.trim()) },
+          }, 'Apply'),
+        ]),
+      ]),
     ])
   },
 })
 
-// --- Plugin 2: image URL dialog ---
-const imageUrlDialog: CmsPlugin = {
-  type: 'dialog',
+// Activator plugin — intercepts dblclick on image elements
+const imageActivator: ActivatorPlugin = {
+  type: 'activator',
   match: 'image',
-  label: 'Set image URL',
-  icon: 'external-link',
-  open: async (el: CmsElement) => {
-    const url = window.prompt('Image URL:', el.content?.startsWith('data:') ? '' : (el.content || ''))
-    if (url === null) return null
-    return { content: url.trim() }
+  activate: async (_el: CmsElement) => {
+    const url = await openDialog<string>(MyImagePickerDialog)
+    if (!url) return null
+    return { content: url }
   },
 }
 
 const plugins: CmsPlugin[] = [
-  {
-    type: 'renderer',
-    match: 'button',
-    component: FancyButtonRenderer,
-  },
-  imageUrlDialog,
+  imageActivator,
 ]
 
 const config: BuilderConfig = {

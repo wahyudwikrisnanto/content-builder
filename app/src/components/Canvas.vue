@@ -67,16 +67,7 @@ function onDrop(e: DragEvent): void {
     return
   }
 
-  const file = e.dataTransfer.files?.[0]
-  if (file && file.type.startsWith('image/')) {
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const el = CmsFactories.image(Math.max(0, x - 100), Math.max(0, y - 80))
-      el.content = ev.target?.result as string
-      cms.addElement(el)
-    }
-    reader.readAsDataURL(file)
-  }
+  // File drops intentionally not supported — use URL-based images only
 }
 
 function onScrollMouseDown(e: MouseEvent): void {

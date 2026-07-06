@@ -87,7 +87,7 @@ function createFrame(x = 60, y = 60): CmsElement {
   return {
     id: cmsUid(), type: 'frame', x, y, width: 400, height: 300, content: '',
     name: 'Frame',
-    styles: { backgroundColor: '#FFFFFF', borderRadius: 0, borderWidth: 1, borderColor: '#D4D4D4', opacity: 1 },
+    styles: { backgroundColor: 'transparent', borderRadius: 0, borderWidth: 1, borderColor: '#D4D4D4', opacity: 1 },
     parentId: null,
     ...baseFlags(),
   }

@@ -24,7 +24,18 @@ export interface DialogPlugin {
   open: (el: CmsElement) => Promise<Partial<CmsElement> | null>
 }
 
-export type CmsPlugin = RendererPlugin | DialogPlugin
+export interface ActivatorPlugin {
+  type: 'activator'
+  /** Element type(s) this plugin handles */
+  match: ElementType | ElementType[] | ((el: CmsElement) => boolean)
+  /**
+   * Called when the user clicks/double-clicks the element.
+   * Resolve with a partial CmsElement to patch, or null to cancel.
+   */
+  activate: (el: CmsElement) => Promise<Partial<CmsElement> | null>
+}
+
+export type CmsPlugin = RendererPlugin | DialogPlugin | ActivatorPlugin
 
 const PLUGINS_KEY = Symbol('cms-plugins')
 
@@ -51,4 +62,11 @@ export function findRendererPlugin(plugins: CmsPlugin[], el: CmsElement): Render
 
 export function findDialogPlugins(plugins: CmsPlugin[], el: CmsElement): DialogPlugin[] {
   return plugins.filter(p => p.type === 'dialog' && matchesElement(p.match, el)) as DialogPlugin[]
+}
+
+export function findActivatorPlugin(plugins: CmsPlugin[], el: CmsElement): ActivatorPlugin | null {
+  for (const p of plugins) {
+    if (p.type === 'activator' && matchesElement(p.match, el)) return p
+  }
+  return null
 }

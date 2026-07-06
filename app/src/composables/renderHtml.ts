@@ -14,15 +14,43 @@ function px(v: number | undefined, fallback = 0): string {
   return (v ?? fallback) + 'px'
 }
 
+// Set by renderHtml before iterating so per-element renderers can look up parents
+let _elementsById: Map<string, CmsElement> = new Map()
+
+function computeClipInset(el: CmsElement): string {
+  // Intersect the bounds of every ancestor frame with clipContent enabled
+  let minX = -Infinity, minY = -Infinity, maxX = Infinity, maxY = Infinity
+  let has = false
+  let cur: CmsElement | undefined = _elementsById.get(el.parentId ?? '')
+  while (cur) {
+    if (cur.type === 'frame' && cur.clipContent) {
+      has = true
+      if (cur.x > minX) minX = cur.x
+      if (cur.y > minY) minY = cur.y
+      if (cur.x + cur.width  < maxX) maxX = cur.x + cur.width
+      if (cur.y + cur.height < maxY) maxY = cur.y + cur.height
+    }
+    cur = _elementsById.get(cur.parentId ?? '')
+  }
+  if (!has) return ''
+  const top    = Math.max(0, minY - el.y)
+  const left   = Math.max(0, minX - el.x)
+  const right  = Math.max(0, (el.x + el.width)  - maxX)
+  const bottom = Math.max(0, (el.y + el.height) - maxY)
+  return `clip-path:inset(${top}px ${right}px ${bottom}px ${left}px)`
+}
+
 function commonBoxStyle(el: CmsElement): string {
   const s = el.styles
   const opacity = s.opacity != null ? s.opacity : 1
+  const clip = computeClipInset(el)
   return [
     `position:absolute`,
     `left:${el.x}px`, `top:${el.y}px`,
     `width:${el.width}px`, `height:${el.height}px`,
     `opacity:${opacity}`,
-  ].join(';')
+    clip,
+  ].filter(Boolean).join(';')
 }
 
 function textCss(s: ElementStyles, extra: Record<string, string> = {}): string {
@@ -78,8 +106,9 @@ function renderText(el: CmsElement): string {
 
 function renderImage(el: CmsElement): string {
   const s = el.styles
-  if (!el.content) return `<div style="${commonBoxStyle(el)};${boxCss(s)}"></div>`
-  return `<div style="${commonBoxStyle(el)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};border-radius:${s.borderRadius || 0}px"/></div>`
+  const src = el.content?.startsWith('data:') ? '' : el.content
+  if (!src) return `<div style="${commonBoxStyle(el)};${boxCss(s)}"></div>`
+  return `<div style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};border-radius:${s.borderRadius || 0}px"/></div>`
 }
 
 function renderShape(el: CmsElement): string {
@@ -117,7 +146,9 @@ function renderContainer(el: CmsElement): string {
 function renderFrame(el: CmsElement): string {
   const s = el.styles
   const clip = el.clipContent ? 'overflow:hidden;' : ''
-  return `<div style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || '#FFF'};border-radius:${s.borderRadius || 0}px;border:${s.borderWidth || 1}px solid ${s.borderColor || '#D4D4D4'}"></div></div>`
+  const bw = s.borderWidth ?? 0
+  const border = bw > 0 ? `border:${bw}px solid ${s.borderColor || '#D4D4D4'};` : ''
+  return `<div style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${s.borderRadius || 0}px;${border}"></div></div>`
 }
 
 function renderButton(el: CmsElement): string {
@@ -245,13 +276,14 @@ export function renderHtml(payload: RenderPayload): string {
   const flexH = payload.canvas.flexibleHeight
   const minHeight = flexH ? Math.max(h, ...payload.elements.map(e => e.visible ? e.y + e.height : 0)) : h
 
+  _elementsById = new Map(payload.elements.map(e => [e.id, e]))
+
   const visibility = (el: CmsElement): boolean => {
     let cur: CmsElement | undefined = el
-    const byId = new Map(payload.elements.map(e => [e.id, e]))
     while (cur) {
       if (!cur.visible) return false
       if (!cur.parentId) return true
-      cur = byId.get(cur.parentId)
+      cur = _elementsById.get(cur.parentId)
     }
     return true
   }

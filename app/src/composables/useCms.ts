@@ -139,6 +139,44 @@ const actions = {
       }
     }
   },
+  /**
+   * Set positions of many elements from absolute (originalX + dx, originalY + dy).
+   * `originals` maps id → starting position captured at drag start.
+   * Descendants of frames in the id list are moved automatically.
+   * Delta is clamped so the group's bounding box stays on-canvas.
+   */
+  moveMany(ids: string[], originals: Map<string, { x: number; y: number }>, dx: number, dy: number): void {
+    if (!ids.length) return
+    const ownership = new Set<string>()
+    for (const id of ids) {
+      ownership.add(id)
+      for (const d of collectDescendantIds(id, state.elements)) ownership.add(d)
+    }
+    // Compute the group's original bounding box from originals + current sizes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const id of ownership) {
+      const orig = originals.get(id); if (!orig) continue
+      const el = state.elements.find(e => e.id === id); if (!el) continue
+      if (orig.x < minX) minX = orig.x
+      if (orig.y < minY) minY = orig.y
+      if (orig.x + el.width  > maxX) maxX = orig.x + el.width
+      if (orig.y + el.height > maxY) maxY = orig.y + el.height
+    }
+    if (minX === Infinity) return
+    // Clamp the group as a single box
+    const groupC = clampPos(
+      { x: minX + dx, y: minY + dy, width: maxX - minX, height: maxY - minY },
+      state.canvasWidth, state.canvasHeight, state.flexibleHeight,
+    )
+    const finalDx = groupC.x - minX
+    const finalDy = groupC.y - minY
+    state.elements = state.elements.map(el => {
+      if (!ownership.has(el.id)) return el
+      const orig = originals.get(el.id)
+      if (!orig) return el
+      return { ...el, x: el.responsive ? 0 : orig.x + finalDx, y: orig.y + finalDy }
+    })
+  },
   moveLayer(id: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
     if (id === targetId) return
     const els = state.elements
@@ -201,17 +239,19 @@ const actions = {
   autoReparent(id: string): void {
     const i = findIdx(id); if (i < 0) return
     const el = state.elements[i]
-    if (el.type === 'frame') return
-    const descendants = new Set(collectDescendantIds(id, state.elements))
+    // descendants includes id itself so a frame can't be nested in its own subtree
+    const descendants = new Set([id, ...collectDescendantIds(id, state.elements)])
     const cx = el.x + el.width / 2
     const cy = el.y + el.height / 2
     let target: string | null = null
+    // For nested frames: pick the smallest containing frame (deepest fit)
+    let bestArea = Infinity
     for (const f of state.elements) {
       if (f.type !== 'frame') continue
-      if (f.id === id || descendants.has(f.id)) continue
-      if (cx >= f.x && cx <= f.x + f.width && cy >= f.y && cy <= f.y + f.height) {
-        target = f.id // last frame wins (topmost in array order)
-      }
+      if (descendants.has(f.id)) continue
+      if (cx < f.x || cx > f.x + f.width || cy < f.y || cy > f.y + f.height) continue
+      const area = f.width * f.height
+      if (area < bestArea) { bestArea = area; target = f.id }
     }
     if (el.parentId !== target) {
       const updated = { ...el, parentId: target }
