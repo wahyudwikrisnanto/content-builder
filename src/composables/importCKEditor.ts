@@ -34,14 +34,14 @@ function parsePx(v: string | undefined): number | undefined {
 }
 
 function textOf(node: Element): string {
-  return (node.textContent || '').replace(/ /g, ' ')
+  return (node.textContent || '').replace(/\u00A0/g, ' ')
 }
 
 function linesFromBlock(el: Element): string {
   // Convert <br> to \n, ignore other tags' structure
   const clone = el.cloneNode(true) as Element
-  clone.querySelectorAll('br').forEach(br => br.replaceWith(document.createTextNode('\n')))
-  return (clone.textContent || '').replace(/ /g, ' ')
+  clone.querySelectorAll('br').forEach((br) => br.replaceWith(document.createTextNode('\n')))
+  return (clone.textContent || '').replace(/\u00A0/g, ' ')
 }
 
 function pickStyles(s: Record<string, string>): ElementStyles {
@@ -61,12 +61,18 @@ function pickStyles(s: Record<string, string>): ElementStyles {
   if (s['border-radius']) out.borderRadius = parsePx(s['border-radius'])
   if (s['border']) {
     const m = /(\d+)px\s+solid\s+([#\w(),.\s%]+)/.exec(s['border'])
-    if (m) { out.borderWidth = parseInt(m[1], 10); out.borderColor = m[2].trim() }
+    if (m) {
+      out.borderWidth = parseInt(m[1], 10)
+      out.borderColor = m[2].trim()
+    }
   }
   if (s['padding']) out.padding = parsePx(s['padding'])
   if (s['-webkit-text-stroke']) {
     const m = /(\d+(?:\.\d+)?)px\s+([#\w(),.\s%]+)/.exec(s['-webkit-text-stroke'])
-    if (m) { out.textStrokeWidth = parseFloat(m[1]); out.textStrokeColor = m[2].trim() }
+    if (m) {
+      out.textStrokeWidth = parseFloat(m[1])
+      out.textStrokeColor = m[2].trim()
+    }
   }
   return out
 }
@@ -111,32 +117,52 @@ function nodeToElements(
 
     // Check for button inside paragraph
     const link = node.querySelector(':scope > a[style]')
-    if (link && tag === 'p' && (link as HTMLAnchorElement).style.display?.includes('inline-block')) {
+    if (
+      link &&
+      tag === 'p' &&
+      (link as HTMLAnchorElement).style.display?.includes('inline-block')
+    ) {
       const lStyles = pickStyles(parseStyle(link.getAttribute('style')))
       const labelText = textOf(link)
       out.push({
-        id: cmsUid(), type: 'button', x: pos.x, y: pos.y, width: 160, height: 44,
+        id: cmsUid(),
+        type: 'button',
+        x: pos.x,
+        y: pos.y,
+        width: 160,
+        height: 44,
         content: labelText,
         href: (link as HTMLAnchorElement).getAttribute('href') || '',
-        target: ((link as HTMLAnchorElement).getAttribute('target') === '_blank') ? '_blank' : '_self',
+        target:
+          (link as HTMLAnchorElement).getAttribute('target') === '_blank' ? '_blank' : '_self',
         styles: {
-          fontSize: lStyles.fontSize ?? 14, fontWeight: lStyles.fontWeight ?? '600',
+          fontSize: lStyles.fontSize ?? 14,
+          fontWeight: lStyles.fontWeight ?? '600',
           color: lStyles.color ?? '#FFFFFF',
           backgroundColor: lStyles.backgroundColor ?? '#2563EB',
           borderRadius: lStyles.borderRadius ?? 8,
           borderWidth: lStyles.borderWidth ?? 0,
           borderColor: lStyles.borderColor ?? '#1E40AF',
-          padding: lStyles.padding ?? 10, textAlign: 'center', lineHeight: 1.2,
-          opacity: 1, fontStyle: 'normal', textDecoration: 'none',
+          padding: lStyles.padding ?? 10,
+          textAlign: 'center',
+          lineHeight: 1.2,
+          opacity: 1,
+          fontStyle: 'normal',
+          textDecoration: 'none',
         },
-        parentId, ...baseFlags(),
+        parentId,
+        ...baseFlags(),
       })
       return out
     }
 
     out.push({
-      id: cmsUid(), type: 'text',
-      x: pos.x, y: pos.y, width: pos.width, height: h,
+      id: cmsUid(),
+      type: 'text',
+      x: pos.x,
+      y: pos.y,
+      width: pos.width,
+      height: h,
       content: text,
       styles: {
         fontSize: fs,
@@ -156,35 +182,46 @@ function nodeToElements(
         textStrokeWidth: styles.textStrokeWidth,
         textStrokeColor: styles.textStrokeColor,
       },
-      parentId, ...baseFlags(),
+      parentId,
+      ...baseFlags(),
     })
     return out
   }
 
   if (tag === 'ul' || tag === 'ol') {
-    const items = Array.from(node.querySelectorAll(':scope > li')).map(li => linesFromBlock(li))
+    const items = Array.from(node.querySelectorAll(':scope > li')).map((li) => linesFromBlock(li))
     const text = items.join('\n')
     const fs = styles.fontSize ?? 16
     const lh = styles.lineHeight ?? 1.5
     const h = Math.ceil(fs * lh * Math.max(1, items.length) + (styles.padding ?? 10) * 2)
     const pos = placeBlock(h)
     out.push({
-      id: cmsUid(), type: 'text',
-      x: pos.x, y: pos.y, width: pos.width, height: h,
+      id: cmsUid(),
+      type: 'text',
+      x: pos.x,
+      y: pos.y,
+      width: pos.width,
+      height: h,
       content: text,
       styles: {
-        fontSize: fs, fontWeight: styles.fontWeight ?? '400',
+        fontSize: fs,
+        fontWeight: styles.fontWeight ?? '400',
         fontStyle: styles.fontStyle ?? 'normal',
         textDecoration: styles.textDecoration ?? 'none',
         color: styles.color ?? '#222222',
         backgroundColor: styles.backgroundColor ?? 'transparent',
         textAlign: styles.textAlign ?? 'left',
-        lineHeight: lh, letterSpacing: 0,
-        borderRadius: 0, padding: styles.padding ?? 10,
-        borderWidth: 0, borderColor: '#DDDDDD', opacity: 1,
+        lineHeight: lh,
+        letterSpacing: 0,
+        borderRadius: 0,
+        padding: styles.padding ?? 10,
+        borderWidth: 0,
+        borderColor: '#DDDDDD',
+        opacity: 1,
         listType: (tag === 'ul' ? 'bullet' : 'number') as ListType,
       },
-      parentId, ...baseFlags(),
+      parentId,
+      ...baseFlags(),
     })
     return out
   }
@@ -192,10 +229,22 @@ function nodeToElements(
   if (tag === 'hr') {
     const pos = placeBlock(2)
     out.push({
-      id: cmsUid(), type: 'divider',
-      x: pos.x, y: pos.y, width: pos.width, height: 2, content: '',
-      styles: { backgroundColor: '#DDDDDD', opacity: 1, borderRadius: 0, borderWidth: 0, borderColor: '#DDDDDD' },
-      parentId, ...baseFlags(),
+      id: cmsUid(),
+      type: 'divider',
+      x: pos.x,
+      y: pos.y,
+      width: pos.width,
+      height: 2,
+      content: '',
+      styles: {
+        backgroundColor: '#DDDDDD',
+        opacity: 1,
+        borderRadius: 0,
+        borderWidth: 0,
+        borderColor: '#DDDDDD',
+      },
+      parentId,
+      ...baseFlags(),
     })
     return out
   }
@@ -209,15 +258,28 @@ function nodeToElements(
     const h = Math.max(120, Math.ceil(lines * 13 * 1.55 + 50))
     const pos = placeBlock(h)
     out.push({
-      id: cmsUid(), type: 'code',
-      x: pos.x, y: pos.y, width: pos.width, height: h,
-      content: text, language: lang, copyEnabled: true,
+      id: cmsUid(),
+      type: 'code',
+      x: pos.x,
+      y: pos.y,
+      width: pos.width,
+      height: h,
+      content: text,
+      language: lang,
+      copyEnabled: true,
       styles: {
-        backgroundColor: '#1E1E2E', color: '#E4E4E7',
-        borderRadius: 8, borderWidth: 0, borderColor: '#3A3A4A',
-        opacity: 1, padding: 14, fontSize: 13, lineHeight: 1.55,
+        backgroundColor: '#1E1E2E',
+        color: '#E4E4E7',
+        borderRadius: 8,
+        borderWidth: 0,
+        borderColor: '#3A3A4A',
+        opacity: 1,
+        padding: 14,
+        fontSize: 13,
+        lineHeight: 1.55,
       },
-      parentId, ...baseFlags(),
+      parentId,
+      ...baseFlags(),
     })
     return out
   }
@@ -230,10 +292,22 @@ function nodeToElements(
       const h = 240
       const pos = placeBlock(h)
       out.push({
-        id: cmsUid(), type: 'image',
-        x: pos.x, y: pos.y, width: pos.width, height: h, content: src,
-        styles: { borderRadius: 8, borderWidth: 0, borderColor: '#DDDDDD', opacity: 1, objectFit: 'cover' },
-        parentId, ...baseFlags(),
+        id: cmsUid(),
+        type: 'image',
+        x: pos.x,
+        y: pos.y,
+        width: pos.width,
+        height: h,
+        content: src,
+        styles: {
+          borderRadius: 8,
+          borderWidth: 0,
+          borderColor: '#DDDDDD',
+          opacity: 1,
+          objectFit: 'cover',
+        },
+        parentId,
+        ...baseFlags(),
       })
       return out
     }
@@ -243,10 +317,16 @@ function nodeToElements(
       const h = 240
       const pos = placeBlock(h)
       out.push({
-        id: cmsUid(), type: 'video',
-        x: pos.x, y: pos.y, width: pos.width, height: h, content: url,
+        id: cmsUid(),
+        type: 'video',
+        x: pos.x,
+        y: pos.y,
+        width: pos.width,
+        height: h,
+        content: url,
         styles: { borderRadius: 8, borderWidth: 0, borderColor: '#DDDDDD', opacity: 1 },
-        parentId, ...baseFlags(),
+        parentId,
+        ...baseFlags(),
       })
       return out
     }
@@ -257,18 +337,35 @@ function nodeToElements(
     const frameId = cmsUid()
     const startY = ctx.bottom
     // Render children first into a sub-context to compute frame size
-    const innerCtx = { x: ctx.x + 12, y: startY + 12, maxWidth: ctx.maxWidth - 24, bottom: startY + 12 }
+    const innerCtx = {
+      x: ctx.x + 12,
+      y: startY + 12,
+      maxWidth: ctx.maxWidth - 24,
+      bottom: startY + 12,
+    }
     const childEls: CmsElement[] = []
     for (const child of Array.from(node.children)) {
       childEls.push(...nodeToElements(child, frameId, innerCtx))
     }
     const frameHeight = Math.max(60, innerCtx.bottom - startY + 12)
     out.push({
-      id: frameId, type: 'frame',
-      x: ctx.x, y: startY, width: ctx.maxWidth, height: frameHeight,
-      content: '', name,
-      styles: { backgroundColor: '#FFFFFF', borderRadius: 0, borderWidth: 1, borderColor: '#D4D4D4', opacity: 1 },
-      parentId, ...baseFlags(),
+      id: frameId,
+      type: 'frame',
+      x: ctx.x,
+      y: startY,
+      width: ctx.maxWidth,
+      height: frameHeight,
+      content: '',
+      name,
+      styles: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 0,
+        borderWidth: 1,
+        borderColor: '#D4D4D4',
+        opacity: 1,
+      },
+      parentId,
+      ...baseFlags(),
     })
     out.push(...childEls)
     ctx.bottom = startY + frameHeight + GAP

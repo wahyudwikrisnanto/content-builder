@@ -33,7 +33,7 @@ function snapshot(): void {
   state.future = []
 }
 
-const findIdx = (id: string): number => state.elements.findIndex(e => e.id === id)
+const findIdx = (id: string): number => state.elements.findIndex((e) => e.id === id)
 
 function collectDescendantIds(parentId: string, elements: CmsElement[]): string[] {
   const out: string[] = []
@@ -41,7 +41,10 @@ function collectDescendantIds(parentId: string, elements: CmsElement[]): string[
   while (stack.length) {
     const p = stack.pop()!
     for (const e of elements) {
-      if (e.parentId === p) { out.push(e.id); stack.push(e.id) }
+      if (e.parentId === p) {
+        out.push(e.id)
+        stack.push(e.id)
+      }
     }
   }
   return out
@@ -52,17 +55,24 @@ function collectDescendantIds(parentId: string, elements: CmsElement[]): string[
  */
 function parentBox(el: CmsElement): { x: number; y: number; width: number; height: number } {
   if (el.parentId) {
-    const parent = state.elements.find(e => e.id === el.parentId)
+    const parent = state.elements.find((e) => e.id === el.parentId)
     if (parent?.type === 'frame') return framePaddingBox(parent)
   }
-  const h = state.flexibleHeight ? Math.max(state.canvasHeight, maxElementBottom(state.elements) + 40) : state.canvasHeight
+  const h = state.flexibleHeight
+    ? Math.max(state.canvasHeight, maxElementBottom(state.elements) + 40)
+    : state.canvasHeight
   return { x: 0, y: 0, width: state.canvasWidth, height: h }
 }
 
 /**
  * Compute the frame's inner padding box (where children may be placed).
  */
-function framePaddingBox(frame: CmsElement): { x: number; y: number; width: number; height: number } {
+function framePaddingBox(frame: CmsElement): {
+  x: number
+  y: number
+  width: number
+  height: number
+} {
   const p = sidePad(frame)
   return {
     x: frame.x + p.l,
@@ -81,13 +91,13 @@ function clampInsideParent(
   proposed: { x: number; y: number },
 ): { x: number; y: number } {
   if (!el.parentId) return proposed
-  const parent = state.elements.find(e => e.id === el.parentId)
+  const parent = state.elements.find((e) => e.id === el.parentId)
   if (!parent || parent.type !== 'frame') return proposed
   const box = framePaddingBox(parent)
   if (box.width <= 0 || box.height <= 0) return proposed
   const minX = box.x
   const minY = box.y
-  const maxX = box.x + box.width  - el.width
+  const maxX = box.x + box.width - el.width
   const maxY = box.y + box.height - el.height
   return {
     x: Math.min(Math.max(proposed.x, minX), Math.max(minX, maxX)),
@@ -100,10 +110,10 @@ function sidePad(frame: CmsElement): { t: number; r: number; b: number; l: numbe
   const s = frame.styles
   const base = s.padding
   return {
-    t: s.paddingTop    ?? base ?? 0,
-    r: s.paddingRight  ?? base ?? 0,
+    t: s.paddingTop ?? base ?? 0,
+    r: s.paddingRight ?? base ?? 0,
     b: s.paddingBottom ?? base ?? 0,
-    l: s.paddingLeft   ?? base ?? 0,
+    l: s.paddingLeft ?? base ?? 0,
   }
 }
 
@@ -128,7 +138,7 @@ function estimatedChildHeight(el: CmsElement): number {
  * `skipGrow`: pass true when user manually resizes the frame so their size sticks.
  */
 function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
-  const i = state.elements.findIndex(e => e.id === frameId)
+  const i = state.elements.findIndex((e) => e.id === frameId)
   if (i < 0) return
   const frame = state.elements[i]
   if (frame.type !== 'frame') return
@@ -145,30 +155,44 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   // the stack on an unrelated edit instead of only when the user actually reorders them.
   const order = new Map(state.elements.map((e, idx) => [e.id, idx]))
   const children = state.elements
-    .filter(e => e.parentId === frameId)
+    .filter((e) => e.parentId === frameId)
     .sort((a, b) => order.get(a.id)! - order.get(b.id)!)
 
   let cursor = dir === 'vertical' ? frame.y + pad.t : frame.x + pad.l
   const nextElements = [...state.elements]
 
   for (const child of children) {
-    const idx = nextElements.findIndex(e => e.id === child.id)
+    const idx = nextElements.findIndex((e) => e.id === child.id)
     if (idx < 0) continue
-    let x = child.x, y = child.y, w = child.width, h = child.height
+    let x: number, y: number
+    let w = child.width,
+      h = child.height
 
     if (dir === 'vertical') {
       y = cursor
-      if (align === 'stretch')      { x = frame.x + pad.l;                     w = Math.max(1, frame.width - pad.l - pad.r) }
-      else if (align === 'center')  { x = frame.x + (frame.width - w) / 2 }
-      else if (align === 'end')     { x = frame.x + frame.width - pad.r - w }
-      else                          { x = frame.x + pad.l }
+      if (align === 'stretch') {
+        x = frame.x + pad.l
+        w = Math.max(1, frame.width - pad.l - pad.r)
+      } else if (align === 'center') {
+        x = frame.x + (frame.width - w) / 2
+      } else if (align === 'end') {
+        x = frame.x + frame.width - pad.r - w
+      } else {
+        x = frame.x + pad.l
+      }
       cursor = y + estimatedChildHeight(child) + gap
     } else {
       x = cursor
-      if (align === 'stretch')      { y = frame.y + pad.t;                     h = Math.max(1, frame.height - pad.t - pad.b) }
-      else if (align === 'center')  { y = frame.y + (frame.height - h) / 2 }
-      else if (align === 'end')     { y = frame.y + frame.height - pad.b - h }
-      else                          { y = frame.y + pad.t }
+      if (align === 'stretch') {
+        y = frame.y + pad.t
+        h = Math.max(1, frame.height - pad.t - pad.b)
+      } else if (align === 'center') {
+        y = frame.y + (frame.height - h) / 2
+      } else if (align === 'end') {
+        y = frame.y + frame.height - pad.b - h
+      } else {
+        y = frame.y + pad.t
+      }
       cursor = x + w + gap
     }
     nextElements[idx] = { ...child, x, y, width: w, height: h }
@@ -178,24 +202,28 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   if (frame.layoutGrow && !opts.skipGrow && children.length) {
     // cursor now sits at the trailing edge (with gap). Content-end = cursor - gap.
     const contentEnd = cursor - gap
-    let newW = frame.width, newH = frame.height
+    let newW: number, newH: number
     if (dir === 'vertical') {
-      newH = Math.max(1, (contentEnd - frame.y) + pad.b)
+      newH = Math.max(1, contentEnd - frame.y + pad.b)
       // Cross axis: fit the widest child
-      const rightMost = Math.max(...children.map(c => {
-        const cur = nextElements.find(n => n.id === c.id)!
-        return cur.x + cur.width
-      }))
-      newW = Math.max(1, (rightMost - frame.x) + pad.r)
+      const rightMost = Math.max(
+        ...children.map((c) => {
+          const cur = nextElements.find((n) => n.id === c.id)!
+          return cur.x + cur.width
+        }),
+      )
+      newW = Math.max(1, rightMost - frame.x + pad.r)
     } else {
-      newW = Math.max(1, (contentEnd - frame.x) + pad.r)
-      const bottomMost = Math.max(...children.map(c => {
-        const cur = nextElements.find(n => n.id === c.id)!
-        return cur.y + cur.height
-      }))
-      newH = Math.max(1, (bottomMost - frame.y) + pad.b)
+      newW = Math.max(1, contentEnd - frame.x + pad.r)
+      const bottomMost = Math.max(
+        ...children.map((c) => {
+          const cur = nextElements.find((n) => n.id === c.id)!
+          return cur.y + cur.height
+        }),
+      )
+      newH = Math.max(1, bottomMost - frame.y + pad.b)
     }
-    const fIdx = nextElements.findIndex(e => e.id === frameId)
+    const fIdx = nextElements.findIndex((e) => e.id === frameId)
     if (fIdx >= 0 && (nextElements[fIdx].width !== newW || nextElements[fIdx].height !== newH)) {
       nextElements[fIdx] = { ...nextElements[fIdx], width: newW, height: newH }
     }
@@ -220,34 +248,42 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
  * being compared are never equal by construction (self is excluded from the anchor set).
  */
 function reorderAutoLayoutChildren(frameId: string, draggedId?: string): void {
-  const frame = state.elements.find(e => e.id === frameId)
+  const frame = state.elements.find((e) => e.id === frameId)
   if (!frame || frame.type !== 'frame') return
   const dir = frame.layoutDirection ?? 'none'
   if (dir === 'none') return
   const isChild = (e: CmsElement): boolean => e.parentId === frameId
   const children = state.elements.filter(isChild)
   if (children.length < 2) return
-  const center = (e: CmsElement): number => dir === 'vertical' ? e.y + e.height / 2 : e.x + e.width / 2
+  const center = (e: CmsElement): number =>
+    dir === 'vertical' ? e.y + e.height / 2 : e.x + e.width / 2
 
   let sorted: CmsElement[]
-  const dragged = draggedId ? children.find(c => c.id === draggedId) : undefined
+  const dragged = draggedId ? children.find((c) => c.id === draggedId) : undefined
   if (dragged) {
-    const others = children.filter(c => c.id !== dragged.id).sort((a, b) => center(a) - center(b))
+    const others = children.filter((c) => c.id !== dragged.id).sort((a, b) => center(a) - center(b))
     const dc = center(dragged)
     // <=, not <: equal-size siblings + edge-snapping means dropping "onto" a sibling aligns
     // both edges AND centers exactly. A strict "<" would treat that dead-even tie as "not
     // before it" and leave the order unchanged — exactly the common case a same-size drag
     // hits, and exactly what should reorder. Ties resolve to "insert before the tied sibling".
-    const insertAt = others.findIndex(o => dc <= center(o))
-    sorted = insertAt < 0 ? [...others, dragged] : [...others.slice(0, insertAt), dragged, ...others.slice(insertAt)]
+    const insertAt = others.findIndex((o) => dc <= center(o))
+    sorted =
+      insertAt < 0
+        ? [...others, dragged]
+        : [...others.slice(0, insertAt), dragged, ...others.slice(insertAt)]
   } else {
     sorted = [...children].sort((a, b) => center(a) - center(b))
   }
 
   const slots: number[] = []
-  state.elements.forEach((e, idx) => { if (isChild(e)) slots.push(idx) })
+  state.elements.forEach((e, idx) => {
+    if (isChild(e)) slots.push(idx)
+  })
   const next = [...state.elements]
-  slots.forEach((slotIdx, i) => { next[slotIdx] = sorted[i] })
+  slots.forEach((slotIdx, i) => {
+    next[slotIdx] = sorted[i]
+  })
   state.elements = next
 }
 
@@ -257,7 +293,7 @@ const actions = {
   /** Returns parent frame's inner padding box, or null if element has no frame parent. */
   parentInnerBox(el: CmsElement): { x: number; y: number; width: number; height: number } | null {
     if (!el.parentId) return null
-    const parent = state.elements.find(e => e.id === el.parentId)
+    const parent = state.elements.find((e) => e.id === el.parentId)
     if (!parent || parent.type !== 'frame') return null
     return framePaddingBox(parent)
   },
@@ -269,50 +305,79 @@ const actions = {
     state.selectedId = element.id
     state.editingTextId = null
   },
-  updateElement(id: string, updates: Partial<CmsElement>, opts: { noHistory?: boolean } = {}): void {
-    const i = findIdx(id); if (i < 0) return
+  updateElement(
+    id: string,
+    updates: Partial<CmsElement>,
+    opts: { noHistory?: boolean } = {},
+  ): void {
+    const i = findIdx(id)
+    if (i < 0) return
     if (!opts.noHistory) snapshot()
     const next = { ...state.elements[i], ...updates }
     const bboxKeys: (keyof CmsElement)[] = ['x', 'y', 'width', 'height']
-    if (bboxKeys.some(k => k in updates)) {
+    if (bboxKeys.some((k) => k in updates)) {
       const c = clampSize(next, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
-      next.x = c.x; next.y = c.y; next.width = c.width; next.height = c.height
+      next.x = c.x
+      next.y = c.y
+      next.width = c.width
+      next.height = c.height
       const clamped = clampInsideParent(next, { x: next.x, y: next.y })
-      next.x = clamped.x; next.y = clamped.y
+      next.x = clamped.x
+      next.y = clamped.y
     }
     state.elements[i] = next
     // Auto-layout reflow triggers
-    const layoutKeys = ['layoutDirection', 'layoutGap', 'layoutPadding', 'layoutAlign', 'layoutGrow', 'x', 'y', 'width', 'height']
+    const layoutKeys = [
+      'layoutDirection',
+      'layoutGap',
+      'layoutPadding',
+      'layoutAlign',
+      'layoutGrow',
+      'x',
+      'y',
+      'width',
+      'height',
+    ]
     // When the frame is being manually resized, skip layoutGrow so user's size wins
     const isSizeEdit = ('width' in updates || 'height' in updates) && !('layoutGrow' in updates)
-    if (next.type === 'frame' && layoutKeys.some(k => k in updates)) {
+    if (next.type === 'frame' && layoutKeys.some((k) => k in updates)) {
       reflowFrame(next.id, { skipGrow: isSizeEdit })
     }
     if (next.parentId) reflowFrame(next.parentId)
   },
-  updateStyles(id: string, styles: Partial<ElementStyles>, opts: { noHistory?: boolean } = {}): void {
-    const i = findIdx(id); if (i < 0) return
+  updateStyles(
+    id: string,
+    styles: Partial<ElementStyles>,
+    opts: { noHistory?: boolean } = {},
+  ): void {
+    const i = findIdx(id)
+    if (i < 0) return
     if (!opts.noHistory) snapshot()
     state.elements[i] = { ...state.elements[i], styles: { ...state.elements[i].styles, ...styles } }
     const el = state.elements[i]
     // Reflow frame if its own padding changed (affects children layout)
     const padKeys = ['padding', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']
-    if (el.type === 'frame' && padKeys.some(k => k in styles)) reflowFrame(id)
+    if (el.type === 'frame' && padKeys.some((k) => k in styles)) reflowFrame(id)
   },
   deleteElement(id: string | null): void {
     if (!id) return
     snapshot()
-    const target = state.elements.find(e => e.id === id)
+    const target = state.elements.find((e) => e.id === id)
     const parentId = target?.parentId ?? null
     const kill = new Set<string>([id, ...collectDescendantIds(id, state.elements)])
-    state.elements = state.elements.filter(e => !kill.has(e.id))
+    state.elements = state.elements.filter((e) => !kill.has(e.id))
     if (state.selectedId && kill.has(state.selectedId)) state.selectedId = null
     if (state.editingTextId && kill.has(state.editingTextId)) state.editingTextId = null
     state.allSelected = false
-    state.selectedIds = state.selectedIds.filter(id => !kill.has(id))
+    state.selectedIds = state.selectedIds.filter((id) => !kill.has(id))
     if (parentId) reflowFrame(parentId)
   },
-  select(id: string | null): void { state.selectedId = id; state.editingTextId = null; state.allSelected = false; state.selectedIds = [] },
+  select(id: string | null): void {
+    state.selectedId = id
+    state.editingTextId = null
+    state.allSelected = false
+    state.selectedIds = []
+  },
   setSelectedIds(ids: string[]): void {
     state.selectedIds = ids
     state.selectedId = null
@@ -322,8 +387,10 @@ const actions = {
   deleteSelected(): void {
     if (!state.selectedIds.length) return
     snapshot()
-    const kill = new Set<string>(state.selectedIds.flatMap(id => [id, ...collectDescendantIds(id, state.elements)]))
-    state.elements = state.elements.filter(e => !kill.has(e.id))
+    const kill = new Set<string>(
+      state.selectedIds.flatMap((id) => [id, ...collectDescendantIds(id, state.elements)]),
+    )
+    state.elements = state.elements.filter((e) => !kill.has(e.id))
     state.selectedIds = []
     state.selectedId = null
     state.editingTextId = null
@@ -350,15 +417,24 @@ const actions = {
     if (id) state.sidebarHidden = true
     else state.sidebarHidden = false
   },
-  toggleSidebar(): void { state.sidebarHidden = !state.sidebarHidden },
+  toggleSidebar(): void {
+    state.sidebarHidden = !state.sidebarHidden
+  },
   move(id: string, x: number, y: number): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     const el = state.elements[i]
     if (el.responsive) x = 0
-    let c = clampPos({ x, y, width: el.width, height: el.height }, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
+    let c = clampPos(
+      { x, y, width: el.width, height: el.height },
+      state.canvasWidth,
+      state.canvasHeight,
+      state.flexibleHeight,
+    )
     const clamped = clampInsideParent(el, { x: c.x, y: c.y })
     c = { ...c, x: clamped.x, y: clamped.y }
-    const dx = c.x - el.x, dy = c.y - el.y
+    const dx = c.x - el.x,
+      dy = c.y - el.y
     state.elements[i] = { ...el, x: c.x, y: c.y }
     // Move descendants with frame
     if (el.type === 'frame' && (dx || dy)) {
@@ -377,7 +453,12 @@ const actions = {
    * Descendants of frames in the id list are moved automatically.
    * Delta is clamped so the group's bounding box stays on-canvas.
    */
-  moveMany(ids: string[], originals: Map<string, { x: number; y: number }>, dx: number, dy: number): void {
+  moveMany(
+    ids: string[],
+    originals: Map<string, { x: number; y: number }>,
+    dx: number,
+    dy: number,
+  ): void {
     if (!ids.length) return
     const ownership = new Set<string>()
     for (const id of ids) {
@@ -385,24 +466,31 @@ const actions = {
       for (const d of collectDescendantIds(id, state.elements)) ownership.add(d)
     }
     // Compute the group's original bounding box from originals + current sizes
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity
     for (const id of ownership) {
-      const orig = originals.get(id); if (!orig) continue
-      const el = state.elements.find(e => e.id === id); if (!el) continue
+      const orig = originals.get(id)
+      if (!orig) continue
+      const el = state.elements.find((e) => e.id === id)
+      if (!el) continue
       if (orig.x < minX) minX = orig.x
       if (orig.y < minY) minY = orig.y
-      if (orig.x + el.width  > maxX) maxX = orig.x + el.width
+      if (orig.x + el.width > maxX) maxX = orig.x + el.width
       if (orig.y + el.height > maxY) maxY = orig.y + el.height
     }
     if (minX === Infinity) return
     // Clamp the group as a single box
     const groupC = clampPos(
       { x: minX + dx, y: minY + dy, width: maxX - minX, height: maxY - minY },
-      state.canvasWidth, state.canvasHeight, state.flexibleHeight,
+      state.canvasWidth,
+      state.canvasHeight,
+      state.flexibleHeight,
     )
     const finalDx = groupC.x - minX
     const finalDy = groupC.y - minY
-    state.elements = state.elements.map(el => {
+    state.elements = state.elements.map((el) => {
       if (!ownership.has(el.id)) return el
       const orig = originals.get(el.id)
       if (!orig) return el
@@ -414,8 +502,8 @@ const actions = {
   moveLayer(id: string, targetId: string, position: 'before' | 'after' | 'inside'): void {
     if (id === targetId) return
     const els = state.elements
-    const src = els.find(e => e.id === id)
-    const dst = els.find(e => e.id === targetId)
+    const src = els.find((e) => e.id === id)
+    const dst = els.find((e) => e.id === targetId)
     if (!src || !dst) return
     // Disallow dropping onto own descendant
     const descendants = new Set(collectDescendantIds(id, els))
@@ -423,21 +511,20 @@ const actions = {
 
     snapshot()
 
-    const newParentId = position === 'inside'
-      ? (dst.type === 'frame' ? dst.id : null)
-      : (dst.parentId ?? null)
+    const newParentId =
+      position === 'inside' ? (dst.type === 'frame' ? dst.id : null) : (dst.parentId ?? null)
 
     // Remove src + descendants block (preserve their order)
     const blockIds = [id, ...collectDescendantIds(id, els)]
-    const block = blockIds.map(bid => els.find(e => e.id === bid)!).filter(Boolean)
-    let rest = els.filter(e => !blockIds.includes(e.id))
+    const block = blockIds.map((bid) => els.find((e) => e.id === bid)!).filter(Boolean)
+    const rest = els.filter((e) => !blockIds.includes(e.id))
 
     // Update src parentId
     const updatedSrc = { ...src, parentId: newParentId }
     const updatedBlock = [updatedSrc, ...block.slice(1)]
 
     // Insert relative to target
-    const dstIdx = rest.findIndex(e => e.id === targetId)
+    const dstIdx = rest.findIndex((e) => e.id === targetId)
     if (position === 'inside') {
       // Append at end of parent's children → put block right after last child of dst
       const dstDesc = new Set(collectDescendantIds(targetId, rest))
@@ -468,7 +555,8 @@ const actions = {
     if (newParentId) reflowFrame(newParentId)
   },
   reparent(id: string, parentId: string | null, opts: { noHistory?: boolean } = {}): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     if (!opts.noHistory) snapshot()
     state.elements[i] = { ...state.elements[i], parentId }
   },
@@ -476,7 +564,8 @@ const actions = {
     // Future hook: collect multi-select. Currently single-select: noop unless extended.
   },
   autoReparent(id: string): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     const el = state.elements[i]
     // descendants includes id itself so a frame can't be nested in its own subtree
     const descendants = new Set([id, ...collectDescendantIds(id, state.elements)])
@@ -490,12 +579,15 @@ const actions = {
       if (descendants.has(f.id)) continue
       if (cx < f.x || cx > f.x + f.width || cy < f.y || cy > f.y + f.height) continue
       const area = f.width * f.height
-      if (area < bestArea) { bestArea = area; target = f.id }
+      if (area < bestArea) {
+        bestArea = area
+        target = f.id
+      }
     }
     const prevParent = el.parentId
     if (el.parentId !== target) {
       const updated = { ...el, parentId: target }
-      state.elements = [...state.elements.filter(e => e.id !== id), updated]
+      state.elements = [...state.elements.filter((e) => e.id !== id), updated]
       // Only reflow here when the parent actually changed (close the old parent's gap, slot
       // into the new one). Reflowing unconditionally — even for a same-frame drag — snaps the
       // dragged element back into its pre-drag slot using the still-old array order, before
@@ -506,19 +598,26 @@ const actions = {
   },
   ungroupFrame(frameId: string): void {
     snapshot()
-    state.elements = state.elements.map(el =>
-      el.parentId === frameId ? { ...el, parentId: null } : el,
-    ).filter(el => el.id !== frameId)
+    state.elements = state.elements
+      .map((el) => (el.parentId === frameId ? { ...el, parentId: null } : el))
+      .filter((el) => el.id !== frameId)
     if (state.selectedId === frameId) state.selectedId = null
   },
   resize(id: string, x: number, y: number, w: number, h: number): void {
-    const i = findIdx(id); if (i < 0) return
-    const c = clampSize({ x, y, width: w, height: h }, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
+    const i = findIdx(id)
+    if (i < 0) return
+    const c = clampSize(
+      { x, y, width: w, height: h },
+      state.canvasWidth,
+      state.canvasHeight,
+      state.flexibleHeight,
+    )
     state.elements[i] = { ...state.elements[i], x: c.x, y: c.y, width: c.width, height: c.height }
   },
   /** Set manualHeight flag directly (no reflow, no history) — used mid-drag by ResizeHandles. */
   setManualHeight(id: string, value: boolean): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     state.elements[i] = { ...state.elements[i], manualHeight: value }
   },
   pushSnapshot(prev: CmsElement[]): void {
@@ -555,7 +654,7 @@ const actions = {
     if (el.parentId) reflowFrame(el.parentId)
   },
   duplicate(id: string): void {
-    const el = state.elements.find(e => e.id === id)
+    const el = state.elements.find((e) => e.id === id)
     if (!el) return
     snapshot()
     const dup: CmsElement = { ...cloneEl(el), id: cmsUid(), x: el.x + 20, y: el.y + 20 }
@@ -568,15 +667,18 @@ const actions = {
     state.selectedId = dup.id
   },
   toggleVisible(id: string): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     state.elements[i] = { ...state.elements[i], visible: !state.elements[i].visible }
   },
   toggleLock(id: string): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     state.elements[i] = { ...state.elements[i], locked: !state.elements[i].locked }
   },
   toggleResponsive(id: string): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     snapshot()
     const el = state.elements[i]
     const next = !el.responsive
@@ -589,30 +691,37 @@ const actions = {
     state.elements[i] = { ...el, ...updates }
   },
   alignH(id: string, side: 'left' | 'center' | 'right'): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     snapshot()
     const el = state.elements[i]
     const box = parentBox(el)
-    const x = side === 'left' ? box.x
-      : side === 'right' ? box.x + box.width - el.width
-      : box.x + (box.width - el.width) / 2
+    const x =
+      side === 'left'
+        ? box.x
+        : side === 'right'
+          ? box.x + box.width - el.width
+          : box.x + (box.width - el.width) / 2
     state.elements[i] = { ...el, x }
   },
   alignV(id: string, side: 'top' | 'middle' | 'bottom'): void {
-    const i = findIdx(id); if (i < 0) return
+    const i = findIdx(id)
+    if (i < 0) return
     snapshot()
     const el = state.elements[i]
     const box = parentBox(el)
-    const y = side === 'top' ? box.y
-      : side === 'bottom' ? box.y + box.height - el.height
-      : box.y + (box.height - el.height) / 2
+    const y =
+      side === 'top'
+        ? box.y
+        : side === 'bottom'
+          ? box.y + box.height - el.height
+          : box.y + (box.height - el.height) / 2
     state.elements[i] = { ...el, y }
   },
   setCanvas(w: number, h: number): void {
-    state.canvasWidth = w; state.canvasHeight = h
-    state.elements = state.elements.map(el =>
-      el.responsive ? { ...el, x: 0, width: w } : el,
-    )
+    state.canvasWidth = w
+    state.canvasHeight = h
+    state.elements = state.elements.map((el) => (el.responsive ? { ...el, x: 0, width: w } : el))
   },
   scaleElements(toWidth: number, toHeight: number): void {
     const fromW = state.canvasWidth
@@ -621,7 +730,7 @@ const actions = {
     snapshot()
     const sx = toWidth / fromW
     const sy = toHeight / fromH
-    state.elements = state.elements.map(el => {
+    state.elements = state.elements.map((el) => {
       const next: typeof el = {
         ...el,
         x: Math.round(el.x * sx),
@@ -632,33 +741,55 @@ const actions = {
       if (el.styles.fontSize) {
         next.styles = { ...el.styles, fontSize: Math.max(8, Math.round(el.styles.fontSize * sx)) }
       }
-      if (el.responsive) { next.x = 0; next.width = toWidth }
+      if (el.responsive) {
+        next.x = 0
+        next.width = toWidth
+      }
       return next
     })
     state.canvasWidth = toWidth
     state.canvasHeight = toHeight
   },
-  setZoom(z: number): void { state.zoom = Math.max(0.25, Math.min(3, z)) },
-  setTab(tab: SidebarTab): void { state.sidebarTab = tab },
-  setGuides(g: Guide[]): void { state.guides = g },
-  clearGuides(): void { state.guides = [] },
+  setZoom(z: number): void {
+    state.zoom = Math.max(0.25, Math.min(3, z))
+  },
+  setTab(tab: SidebarTab): void {
+    state.sidebarTab = tab
+  },
+  setGuides(g: Guide[]): void {
+    state.guides = g
+  },
+  clearGuides(): void {
+    state.guides = []
+  },
   isEffectivelyVisible(id: string): boolean {
-    let cur = state.elements.find(e => e.id === id)
+    let cur = state.elements.find((e) => e.id === id)
     while (cur) {
       if (!cur.visible) return false
       if (!cur.parentId) return true
-      cur = state.elements.find(e => e.id === cur!.parentId)
+      cur = state.elements.find((e) => e.id === cur!.parentId)
     }
     return true
   },
-  toggleFullscreen(): void { state.fullscreen = !state.fullscreen },
-  toggleFlexibleHeight(): void { state.flexibleHeight = !state.flexibleHeight },
+  toggleFullscreen(): void {
+    state.fullscreen = !state.fullscreen
+  },
+  toggleFlexibleHeight(): void {
+    state.flexibleHeight = !state.flexibleHeight
+  },
   togglePreview(): void {
     state.preview = !state.preview
-    if (state.preview) { state.selectedId = null; state.editingTextId = null; state.guides = [] }
-    else { state.previewFullscreen = false }
+    if (state.preview) {
+      state.selectedId = null
+      state.editingTextId = null
+      state.guides = []
+    } else {
+      state.previewFullscreen = false
+    }
   },
-  togglePreviewFullscreen(): void { state.previewFullscreen = !state.previewFullscreen },
+  togglePreviewFullscreen(): void {
+    state.previewFullscreen = !state.previewFullscreen
+  },
   exportJson(): string {
     const payload = {
       version: 1,
@@ -690,14 +821,22 @@ const actions = {
   },
   exportCKEditorHtml(): string {
     return renderCKEditorHtml({
-      canvas: { width: state.canvasWidth, height: state.canvasHeight, flexibleHeight: state.flexibleHeight },
+      canvas: {
+        width: state.canvasWidth,
+        height: state.canvasHeight,
+        flexibleHeight: state.flexibleHeight,
+      },
       elements: cloneEl(state.elements),
     })
   },
   importJson(json: string): { ok: boolean; error?: string } {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- parsing untrusted JSON before validation
     let data: any
-    try { data = JSON.parse(json) }
-    catch (e) { return { ok: false, error: 'Invalid JSON' } }
+    try {
+      data = JSON.parse(json)
+    } catch {
+      return { ok: false, error: 'Invalid JSON' }
+    }
     if (!data || typeof data !== 'object') return { ok: false, error: 'Bad payload' }
     if (!Array.isArray(data.elements)) return { ok: false, error: 'Missing elements array' }
 
@@ -713,7 +852,7 @@ const actions = {
       if (typeof c.flexibleHeight === 'boolean') state.flexibleHeight = c.flexibleHeight
     }
 
-    state.elements = (data.elements as CmsElement[]).map(e => ({ ...cloneEl(e) }))
+    state.elements = (data.elements as CmsElement[]).map((e) => ({ ...cloneEl(e) }))
     state.selectedId = null
     state.editingTextId = null
     state.guides = []
@@ -724,18 +863,24 @@ const actions = {
     const prev = state.history.pop()!
     state.future.unshift(cloneEl(state.elements))
     state.elements = prev
-    state.selectedId = null; state.selectedIds = []; state.editingTextId = null
+    state.selectedId = null
+    state.selectedIds = []
+    state.editingTextId = null
   },
   redo(): void {
     if (!state.future.length) return
     const next = state.future.shift()!
     state.history.push(cloneEl(state.elements))
     state.elements = next
-    state.selectedId = null; state.selectedIds = []; state.editingTextId = null
+    state.selectedId = null
+    state.selectedIds = []
+    state.editingTextId = null
   },
 }
 
-const selected = computed<CmsElement | null>(() => state.elements.find(e => e.id === state.selectedId) || null)
+const selected = computed<CmsElement | null>(
+  () => state.elements.find((e) => e.id === state.selectedId) || null,
+)
 const canUndo = computed(() => state.history.length > 0)
 const canRedo = computed(() => state.future.length > 0)
 const effectiveHeight = computed(() =>

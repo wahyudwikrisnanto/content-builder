@@ -10,24 +10,27 @@ export function openDialog<T>(
   DialogComponent: Component,
   props: Record<string, unknown> = {},
 ): Promise<T | null> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const container = document.createElement('div')
     document.body.appendChild(container)
 
-    const app = createApp(defineComponent({
-      setup() {
-        function done(val: T | null): void {
-          app.unmount()
-          container.remove()
-          resolve(val)
-        }
-        return () => h(DialogComponent as any, {
-          ...props,
-          onConfirm: (val: T) => done(val),
-          onClose: () => done(null),
-        })
-      },
-    }))
+    const app = createApp(
+      defineComponent({
+        setup() {
+          function done(val: T | null): void {
+            app.unmount()
+            container.remove()
+            resolve(val)
+          }
+          return () =>
+            h(DialogComponent, {
+              ...props,
+              onConfirm: (val: T) => done(val),
+              onClose: () => done(null),
+            })
+        },
+      }),
+    )
 
     app.mount(container)
   })
