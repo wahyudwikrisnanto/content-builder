@@ -22,7 +22,13 @@ function onClick(): void {
 </script>
 
 <template>
-  <div class="element-item" draggable="true" @dragstart="onDragStart" @click="onClick" :title="`Drag or click to add ${label}`">
+  <div
+    class="element-item"
+    draggable="true"
+    @dragstart="onDragStart"
+    @click="onClick"
+    :title="`Drag or click to add ${label}`"
+  >
     <slot />
     <span class="element-item-label">{{ label }}</span>
   </div>

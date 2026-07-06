@@ -13,11 +13,13 @@ const editorRef = ref<HTMLElement | null>(null)
 const btnStyle = computed<CSSProperties>(() => {
   const s = props.element.styles
   return {
-    width: '100%', height: '100%',
+    width: '100%',
+    height: '100%',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: s.textAlign === 'left' ? 'flex-start' : s.textAlign === 'right' ? 'flex-end' : 'center',
-    padding: paddingValue(s) ?? ((s.padding ?? 10) + 'px'),
+    justifyContent:
+      s.textAlign === 'left' ? 'flex-start' : s.textAlign === 'right' ? 'flex-end' : 'center',
+    padding: paddingValue(s) ?? (s.padding ?? 10) + 'px',
     backgroundColor: s.backgroundColor || '#2563EB',
     color: s.color || '#FFFFFF',
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
@@ -41,27 +43,32 @@ const btnStyle = computed<CSSProperties>(() => {
   }
 })
 
-watch(() => props.isEditing, async (v) => {
-  if (!v) return
-  await nextTick()
-  const el = editorRef.value
-  if (!el) return
-  el.innerText = props.element.content || ''
-  el.focus()
-  try {
-    const sel = window.getSelection()
-    const range = document.createRange()
-    range.selectNodeContents(el)
-    sel?.removeAllRanges()
-    sel?.addRange(range)
-  } catch {}
-})
+watch(
+  () => props.isEditing,
+  async (v) => {
+    if (!v) return
+    await nextTick()
+    const el = editorRef.value
+    if (!el) return
+    el.innerText = props.element.content || ''
+    el.focus()
+    try {
+      const sel = window.getSelection()
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+    } catch {}
+  },
+)
 
 function onInput(e: Event): void {
   const t = e.target as HTMLElement
   cms.updateElement(props.element.id, { content: t.innerText }, { noHistory: true })
 }
-function onBlur(): void { cms.setEditing(null) }
+function onBlur(): void {
+  cms.setEditing(null)
+}
 function onKeyDown(e: KeyboardEvent): void {
   if (e.key === 'Escape') (e.target as HTMLElement).blur()
   if (e.key === 'Enter') e.preventDefault()
@@ -74,13 +81,24 @@ function onPaste(e: ClipboardEvent): void {
 </script>
 
 <template>
-  <div v-if="isEditing" ref="editorRef" contenteditable="true"
+  <div
+    v-if="isEditing"
+    ref="editorRef"
+    contenteditable="true"
     :style="btnStyle"
-    @input="onInput" @blur="onBlur" @paste="onPaste" @mousedown.stop @keydown="onKeyDown"></div>
-  <a v-else-if="cms.state.preview && element.href"
+    @input="onInput"
+    @blur="onBlur"
+    @paste="onPaste"
+    @mousedown.stop
+    @keydown="onKeyDown"
+  ></div>
+  <a
+    v-else-if="cms.state.preview && element.href"
     :href="element.href"
     :target="element.target || '_self'"
     rel="noopener noreferrer"
-    :style="{ ...btnStyle, textDecoration: 'none', cursor: 'pointer' }">{{ element.content }}</a>
+    :style="{ ...btnStyle, textDecoration: 'none', cursor: 'pointer' }"
+    >{{ element.content }}</a
+  >
   <div v-else :style="btnStyle">{{ element.content }}</div>
 </template>

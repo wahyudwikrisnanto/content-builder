@@ -22,7 +22,7 @@ const props = defineProps<{ plugins?: CmsPlugin[]; config?: BuilderConfig }>()
 const modelValue = defineModel<string>()
 
 const emit = defineEmits<{
-  'change': [value: string]
+  change: [value: string]
 }>()
 
 const cms = useCms()
@@ -83,7 +83,13 @@ watch(modelValue, (val) => {
 
 // Sync internal state → modelValue (deep watch covers element edits)
 watch(
-  () => [cms.state.elements, cms.state.canvasWidth, cms.state.canvasHeight, cms.state.flexibleHeight] as const,
+  () =>
+    [
+      cms.state.elements,
+      cms.state.canvasWidth,
+      cms.state.canvasHeight,
+      cms.state.flexibleHeight,
+    ] as const,
   () => {
     if (_loading) return
     const json = cms.exportJson()
@@ -100,29 +106,57 @@ function onKey(e: KeyboardEvent): void {
   const isCE = (document.activeElement as HTMLElement | null)?.contentEditable === 'true'
   const mod = e.ctrlKey || e.metaKey
 
-  if (e.key === 'z' && mod && !e.shiftKey) { e.preventDefault(); cms.undo(); return }
-  if ((e.key === 'z' && mod && e.shiftKey) || (e.key === 'y' && mod)) { e.preventDefault(); cms.redo(); return }
+  if (e.key === 'z' && mod && !e.shiftKey) {
+    e.preventDefault()
+    cms.undo()
+    return
+  }
+  if ((e.key === 'z' && mod && e.shiftKey) || (e.key === 'y' && mod)) {
+    e.preventDefault()
+    cms.redo()
+    return
+  }
 
   if (isInput || isCE) {
     if (e.key === 'Escape' && isCE) (document.activeElement as HTMLElement | null)?.blur()
     return
   }
   if (e.key === 'a' && mod) {
-    e.preventDefault(); cms.selectAll(); return
+    e.preventDefault()
+    cms.selectAll()
+    return
   }
   if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (cms.state.allSelected) { e.preventDefault(); cms.deleteAll(); return }
-    if (cms.state.selectedIds.length) { e.preventDefault(); cms.deleteSelected(); return }
-    if (cms.state.selectedId) { e.preventDefault(); cms.deleteElement(cms.state.selectedId) }
+    if (cms.state.allSelected) {
+      e.preventDefault()
+      cms.deleteAll()
+      return
+    }
+    if (cms.state.selectedIds.length) {
+      e.preventDefault()
+      cms.deleteSelected()
+      return
+    }
+    if (cms.state.selectedId) {
+      e.preventDefault()
+      cms.deleteElement(cms.state.selectedId)
+    }
   }
   if (e.key === 'Escape') {
     if (cms.state.previewFullscreen) cms.togglePreviewFullscreen()
     else if (cms.state.preview) cms.togglePreview()
     else if (cms.state.fullscreen) cms.toggleFullscreen()
-    else { cms.select(null); cms.state.allSelected = false; cms.state.selectedIds = [] }
+    else {
+      cms.select(null)
+      cms.state.allSelected = false
+      cms.state.selectedIds = []
+    }
   }
   if (e.key === 'd' && mod) {
-    if (cms.state.selectedId) { e.preventDefault(); cms.duplicate(cms.state.selectedId) }
+    if (cms.state.selectedId) {
+      e.preventDefault()
+      cms.duplicate(cms.state.selectedId)
+    }
   }
 }
 </script>

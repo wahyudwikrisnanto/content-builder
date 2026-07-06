@@ -12,7 +12,11 @@ import type { CmsElement, ElementType, FactoryKey, SidebarTab, SidebarSection } 
 const cms = useCms()
 const config = useBuilderConfig()
 
-interface Tab { id: SidebarSection; label: string; icon: string }
+interface Tab {
+  id: SidebarSection
+  label: string
+  icon: string
+}
 const SECTION_ICONS: Record<SidebarSection, string> = {
   elements: 'plus',
   layers: 'layers',
@@ -20,28 +24,63 @@ const SECTION_ICONS: Record<SidebarSection, string> = {
 }
 
 const visibleTabs = computed<Tab[]>(() =>
-  resolveVisibleSections(config.sidebar).map(id => ({
+  resolveVisibleSections(config.sidebar).map((id) => ({
     id,
     label: resolveSectionLabel(id, config.sidebar),
     icon: SECTION_ICONS[id],
-  }))
+  })),
 )
 
 const TYPE_ICON: Record<ElementType, string> = {
-  text: 'type', image: 'image', shape: 'square',
-  video: 'video', divider: 'divider', container: 'container',
-  frame: 'frame', code: 'code', button: 'button', input: 'input',
+  text: 'type',
+  image: 'image',
+  shape: 'square',
+  video: 'video',
+  divider: 'divider',
+  container: 'container',
+  frame: 'frame',
+  code: 'code',
+  button: 'button',
+  input: 'input',
 }
 
-interface TextPreset { key: FactoryKey; label: string; desc: string; style: CSSProperties }
+interface TextPreset {
+  key: FactoryKey
+  label: string
+  desc: string
+  style: CSSProperties
+}
 const TEXT_PRESETS: TextPreset[] = [
-  { key: 'text-heading',    label: 'Heading',    desc: 'Bold, 36px',           style: { fontSize: '18px', fontWeight: 700 } },
-  { key: 'text-subheading', label: 'Subheading', desc: 'Semibold, 22px',       style: { fontSize: '14px', fontWeight: 600 } },
-  { key: 'text-body',       label: 'Body text',  desc: 'Regular, 16px',        style: { fontSize: '13px', fontWeight: 400 } },
-  { key: 'text-caption',    label: 'Caption',    desc: 'Regular, 12px · Gray', style: { fontSize: '11px', fontWeight: 400, color: '#717171' } },
+  {
+    key: 'text-heading',
+    label: 'Heading',
+    desc: 'Bold, 36px',
+    style: { fontSize: '18px', fontWeight: 700 },
+  },
+  {
+    key: 'text-subheading',
+    label: 'Subheading',
+    desc: 'Semibold, 22px',
+    style: { fontSize: '14px', fontWeight: 600 },
+  },
+  {
+    key: 'text-body',
+    label: 'Body text',
+    desc: 'Regular, 16px',
+    style: { fontSize: '13px', fontWeight: 400 },
+  },
+  {
+    key: 'text-caption',
+    label: 'Caption',
+    desc: 'Regular, 12px · Gray',
+    style: { fontSize: '11px', fontWeight: 400, color: '#717171' },
+  },
 ]
 
-interface LayerNode { el: CmsElement; depth: number }
+interface LayerNode {
+  el: CmsElement
+  depth: number
+}
 
 const layerTree = computed<LayerNode[]>(() => {
   const els = cms.state.elements
@@ -49,7 +88,8 @@ const layerTree = computed<LayerNode[]>(() => {
   for (const e of els) {
     const p = e.parentId ?? null
     const arr = byParent.get(p) ?? []
-    arr.push(e); byParent.set(p, arr)
+    arr.push(e)
+    byParent.set(p, arr)
   }
   const out: LayerNode[] = []
   const walk = (parent: string | null, depth: number): void => {
@@ -70,7 +110,8 @@ function layerName(el: CmsElement): string {
   if (el.name) return el.name
   if (el.type === 'text') return (el.content || '').slice(0, 24) || 'Text'
   if (el.type === 'button') return (el.content || '').slice(0, 24) || 'Button'
-  if (el.type === 'shape') return el.shapeType === 'circle' ? 'Circle' : el.shapeType === 'line' ? 'Line' : 'Rectangle'
+  if (el.type === 'shape')
+    return el.shapeType === 'circle' ? 'Circle' : el.shapeType === 'line' ? 'Line' : 'Rectangle'
   if (el.type === 'frame') return 'Frame'
   return el.type.charAt(0).toUpperCase() + el.type.slice(1)
 }
@@ -110,10 +151,14 @@ function onLayerDrop(e: DragEvent, targetId: string): void {
   dropOver.value = null
   if (!id || !dp || dp.id !== targetId) return
   // Translate UI position → array position: UI list is reversed of array order
-  const arrayPos: DropPos = dp.pos === 'inside' ? 'inside' : dp.pos === 'before' ? 'after' : 'before'
+  const arrayPos: DropPos =
+    dp.pos === 'inside' ? 'inside' : dp.pos === 'before' ? 'after' : 'before'
   cms.moveLayer(id, targetId, arrayPos)
 }
-function onLayerDragEnd(): void { dragId.value = null; dropOver.value = null }
+function onLayerDragEnd(): void {
+  dragId.value = null
+  dropOver.value = null
+}
 
 function addPreset(key: FactoryKey): void {
   cms.addElement(CmsFactories[key](cms.state.canvasWidth / 2 - 120, 80 + Math.random() * 100))
@@ -125,9 +170,12 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
 <template>
   <div v-if="visibleTabs.length" class="sidebar">
     <div class="sidebar-tabs">
-      <button v-for="t in visibleTabs" :key="t.id"
+      <button
+        v-for="t in visibleTabs"
+        :key="t.id"
         :class="['sidebar-tab', { active: cms.state.sidebarTab === t.id }]"
-        @click="cms.setTab(t.id as SidebarTab)">
+        @click="cms.setTab(t.id as SidebarTab)"
+      >
         <Icon :name="t.icon" :size="15" />
         <span>{{ t.label }}</span>
       </button>
@@ -181,13 +229,36 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
           <div class="element-section-title">Shapes</div>
           <div class="element-grid three-col">
             <DragItem type="shape-rect" label="Rectangle">
-              <div :style="{ width: '28px', height: '22px', borderRadius: '4px', background: '#E8E8E8', border: '1.5px solid #CFCFCF' }"></div>
+              <div
+                :style="{
+                  width: '28px',
+                  height: '22px',
+                  borderRadius: '4px',
+                  background: '#E8E8E8',
+                  border: '1.5px solid #CFCFCF',
+                }"
+              ></div>
             </DragItem>
             <DragItem type="shape-circle" label="Circle">
-              <div :style="{ width: '24px', height: '24px', borderRadius: '999px', background: '#E8E8E8', border: '1.5px solid #CFCFCF' }"></div>
+              <div
+                :style="{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '999px',
+                  background: '#E8E8E8',
+                  border: '1.5px solid #CFCFCF',
+                }"
+              ></div>
             </DragItem>
             <DragItem type="shape-line" label="Line">
-              <div :style="{ width: '28px', height: '2px', background: '#ABABAB', borderRadius: '1px' }"></div>
+              <div
+                :style="{
+                  width: '28px',
+                  height: '2px',
+                  background: '#ABABAB',
+                  borderRadius: '1px',
+                }"
+              ></div>
             </DragItem>
           </div>
         </div>
@@ -196,10 +267,26 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
           <div class="element-section-title">Layout</div>
           <div class="element-grid">
             <DragItem type="frame" label="Frame">
-              <div :style="{ width: '28px', height: '22px', borderRadius: '2px', background: '#FFF', border: '1.5px solid #8A8A8A' }"></div>
+              <div
+                :style="{
+                  width: '28px',
+                  height: '22px',
+                  borderRadius: '2px',
+                  background: '#FFF',
+                  border: '1.5px solid #8A8A8A',
+                }"
+              ></div>
             </DragItem>
             <DragItem type="divider" label="Divider">
-              <div :style="{ width: '32px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }">
+              <div
+                :style="{
+                  width: '32px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  alignItems: 'center',
+                }"
+              >
                 <div :style="{ width: '100%', height: '1px', background: '#D0D0D0' }"></div>
               </div>
             </DragItem>
@@ -244,31 +331,52 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
           <p class="empty-sub">Add elements to see them here</p>
         </div>
         <div v-else class="layers-list">
-          <div v-for="node in layerTree" :key="node.el.id"
-            :class="['layer-item', {
-              active: node.el.id === cms.state.selectedId,
-              'drop-before': dropOver?.id === node.el.id && dropOver.pos === 'before',
-              'drop-after': dropOver?.id === node.el.id && dropOver.pos === 'after',
-              'drop-inside': dropOver?.id === node.el.id && dropOver.pos === 'inside',
-              dragging: dragId === node.el.id,
-            }]"
-            :style="{ paddingLeft: (10 + node.depth * 14) + 'px' }"
+          <div
+            v-for="node in layerTree"
+            :key="node.el.id"
+            :class="[
+              'layer-item',
+              {
+                active: node.el.id === cms.state.selectedId,
+                'drop-before': dropOver?.id === node.el.id && dropOver.pos === 'before',
+                'drop-after': dropOver?.id === node.el.id && dropOver.pos === 'after',
+                'drop-inside': dropOver?.id === node.el.id && dropOver.pos === 'inside',
+                dragging: dragId === node.el.id,
+              },
+            ]"
+            :style="{ paddingLeft: 10 + node.depth * 14 + 'px' }"
             draggable="true"
             @click="cms.select(node.el.id)"
             @dragstart="onLayerDragStart($event, node.el.id)"
             @dragover="onLayerDragOver($event, node.el.id, node.el.type === 'frame')"
             @dragleave="dropOver = null"
             @drop="onLayerDrop($event, node.el.id)"
-            @dragend="onLayerDragEnd">
-            <span class="layer-item-icon" :style="{ opacity: cms.isEffectivelyVisible(node.el.id) ? 1 : 0.3 }">
+            @dragend="onLayerDragEnd"
+          >
+            <span
+              class="layer-item-icon"
+              :style="{ opacity: cms.isEffectivelyVisible(node.el.id) ? 1 : 0.3 }"
+            >
               <Icon :name="TYPE_ICON[node.el.type]" :size="14" />
             </span>
-            <span class="layer-item-name" :style="{ opacity: cms.isEffectivelyVisible(node.el.id) ? 1 : 0.4 }">{{ layerName(node.el) }}</span>
+            <span
+              class="layer-item-name"
+              :style="{ opacity: cms.isEffectivelyVisible(node.el.id) ? 1 : 0.4 }"
+              >{{ layerName(node.el) }}</span
+            >
             <div class="layer-item-actions">
-              <button class="icon-btn-sm" @click.stop="cms.toggleVisible(node.el.id)" :title="node.el.visible ? 'Hide' : 'Show'">
+              <button
+                class="icon-btn-sm"
+                @click.stop="cms.toggleVisible(node.el.id)"
+                :title="node.el.visible ? 'Hide' : 'Show'"
+              >
                 <Icon :name="node.el.visible ? 'eye' : 'eye-off'" :size="13" />
               </button>
-              <button class="icon-btn-sm" @click.stop="cms.toggleLock(node.el.id)" :title="node.el.locked ? 'Unlock' : 'Lock'">
+              <button
+                class="icon-btn-sm"
+                @click.stop="cms.toggleLock(node.el.id)"
+                :title="node.el.locked ? 'Unlock' : 'Lock'"
+              >
                 <Icon :name="node.el.locked ? 'lock' : 'unlock'" :size="13" />
               </button>
             </div>
@@ -277,7 +385,12 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
       </div>
 
       <div v-else-if="cms.state.sidebarTab === 'textStyles'">
-        <div v-for="p in TEXT_PRESETS" :key="p.key" class="text-style-card" @click="addPreset(p.key)">
+        <div
+          v-for="p in TEXT_PRESETS"
+          :key="p.key"
+          class="text-style-card"
+          @click="addPreset(p.key)"
+        >
           <span :style="{ ...p.style, color: presetColor(p.style) }">{{ p.label }}</span>
           <span class="text-style-desc">{{ p.desc }}</span>
         </div>

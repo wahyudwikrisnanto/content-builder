@@ -16,9 +16,18 @@ const embedSrc = computed(() => {
 </script>
 
 <template>
-  <iframe v-if="element.content" :src="embedSrc"
-    :style="{ width: '100%', height: '100%', border: 'none', borderRadius: element.styles.borderRadius + 'px', pointerEvents: cms.state.preview ? 'auto' : 'none' }"
-    allowfullscreen></iframe>
+  <iframe
+    v-if="element.content"
+    :src="embedSrc"
+    :style="{
+      width: '100%',
+      height: '100%',
+      border: 'none',
+      borderRadius: element.styles.borderRadius + 'px',
+      pointerEvents: cms.state.preview ? 'auto' : 'none',
+    }"
+    allowfullscreen
+  ></iframe>
   <div v-else class="vid-placeholder">
     <Icon name="video" :size="28" :style="{ opacity: 0.5 }" />
     <span>Add video URL in properties</span>

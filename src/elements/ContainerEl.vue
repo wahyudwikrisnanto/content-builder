@@ -8,7 +8,8 @@ const props = defineProps<{ element: CmsElement }>()
 const style = computed<CSSProperties>(() => {
   const s = props.element.styles
   return {
-    width: '100%', height: '100%',
+    width: '100%',
+    height: '100%',
     backgroundColor: s.backgroundColor,
     borderRadius: s.borderRadius + 'px',
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',

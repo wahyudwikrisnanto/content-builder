@@ -26,9 +26,16 @@ const cms = useCms()
 const plugins = usePlugins()
 
 const RENDERERS: Record<ElementType, Component> = {
-  text: TextEl, image: ImageEl, shape: ShapeEl,
-  video: VideoEl, divider: DividerEl, container: ContainerEl,
-  frame: FrameEl, code: CodeEl, button: ButtonEl, input: InputEl,
+  text: TextEl,
+  image: ImageEl,
+  shape: ShapeEl,
+  video: VideoEl,
+  divider: DividerEl,
+  container: ContainerEl,
+  frame: FrameEl,
+  code: CodeEl,
+  button: ButtonEl,
+  input: InputEl,
 }
 
 const activeRenderer = computed<Component>(() => {
@@ -41,8 +48,11 @@ const activeRenderer = computed<Component>(() => {
 const clipStyle = computed<CSSProperties>(() => {
   if (props.isSelected || cms.state.preview) return {}
   if (!props.element.parentId) return {}
-  const byId = new Map(cms.state.elements.map(e => [e.id, e]))
-  let minX = -Infinity, minY = -Infinity, maxX = Infinity, maxY = Infinity
+  const byId = new Map(cms.state.elements.map((e) => [e.id, e]))
+  let minX = -Infinity,
+    minY = -Infinity,
+    maxX = Infinity,
+    maxY = Infinity
   let has = false
   let cur = byId.get(props.element.parentId)
   while (cur) {
@@ -50,16 +60,16 @@ const clipStyle = computed<CSSProperties>(() => {
       has = true
       if (cur.x > minX) minX = cur.x
       if (cur.y > minY) minY = cur.y
-      if (cur.x + cur.width  < maxX) maxX = cur.x + cur.width
+      if (cur.x + cur.width < maxX) maxX = cur.x + cur.width
       if (cur.y + cur.height < maxY) maxY = cur.y + cur.height
     }
     cur = cur.parentId ? byId.get(cur.parentId) : undefined
   }
   if (!has) return {}
-  const top    = Math.max(0, minY - props.element.y)
-  const left   = Math.max(0, minX - props.element.x)
-  const right  = Math.max(0, (props.element.x + props.element.width)  - maxX)
-  const bottom = Math.max(0, (props.element.y + props.element.height) - maxY)
+  const top = Math.max(0, minY - props.element.y)
+  const left = Math.max(0, minX - props.element.x)
+  const right = Math.max(0, props.element.x + props.element.width - maxX)
+  const bottom = Math.max(0, props.element.y + props.element.height - maxY)
   return { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px)` }
 })
 
@@ -67,15 +77,18 @@ const isFrame = computed(() => props.element.type === 'frame')
 
 function beginDragFor(target: CmsElement, e: MouseEvent): void {
   const z = cms.state.zoom
-  const startX = e.clientX, startY = e.clientY
-  const origX = target.x, origY = target.y
+  const startX = e.clientX,
+    startY = e.clientY
+  const origX = target.x,
+    origY = target.y
   const prev = cloneEl(cms.state.elements)
   let moved = false
 
   // Multi-select: drag ALL selected elements together
-  const groupIds = cms.state.selectedIds.length > 1 && cms.state.selectedIds.includes(target.id)
-    ? [...cms.state.selectedIds]
-    : null
+  const groupIds =
+    cms.state.selectedIds.length > 1 && cms.state.selectedIds.includes(target.id)
+      ? [...cms.state.selectedIds]
+      : null
 
   // Snapshot original positions of all elements that will move (group + descendants of frames)
   const originals = new Map<string, { x: number; y: number }>()
@@ -106,11 +119,15 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       cms.move(target.id, rawX, rawY)
       return
     }
-    const siblings = cms.state.elements.filter(e => e.id !== target.id && cms.isEffectivelyVisible(e.id))
+    const siblings = cms.state.elements.filter(
+      (e) => e.id !== target.id && cms.isEffectivelyVisible(e.id),
+    )
     const parentBox = cms.parentInnerBox(target)
     const snap = computeSnap(
       { x: rawX, y: rawY, width: target.width, height: target.height },
-      siblings, cms.state.canvasWidth, cms.effectiveHeight.value,
+      siblings,
+      cms.state.canvasWidth,
+      cms.effectiveHeight.value,
       6 / z,
       parentBox ?? undefined,
     )
@@ -124,9 +141,9 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     if (moved) {
       if (!groupIds) cms.autoReparent(target.id)
       // Reflow parent auto-layout frame after drag (snaps child into new order)
-      const cur = cms.state.elements.find(e => e.id === target.id)
+      const cur = cms.state.elements.find((e) => e.id === target.id)
       if (cur?.parentId) {
-        const parent = cms.state.elements.find(e => e.id === cur.parentId)
+        const parent = cms.state.elements.find((e) => e.id === cur.parentId)
         if (parent?.type === 'frame' && (parent.layoutDirection ?? 'none') !== 'none') {
           cms.reorderAutoLayoutChildren(parent.id, target.id)
           cms.reflowFrame(parent.id)
@@ -139,14 +156,16 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
   document.addEventListener('mouseup', onUp)
 }
 
-function beginDrag(e: MouseEvent): void { beginDragFor(props.element, e) }
+function beginDrag(e: MouseEvent): void {
+  beginDragFor(props.element, e)
+}
 
 // Walk up the parent chain to the top-most ancestor frame
 function findTopFrameId(startId: string): string | null {
-  let current = cms.state.elements.find(e => e.id === startId)
+  let current = cms.state.elements.find((e) => e.id === startId)
   let topFrame: string | null = null
   while (current?.parentId) {
-    const parent = cms.state.elements.find(e => e.id === current!.parentId)
+    const parent = cms.state.elements.find((e) => e.id === current!.parentId)
     if (!parent) break
     if (parent.type === 'frame') topFrame = parent.id
     current = parent
@@ -178,7 +197,7 @@ function onMouseDown(e: MouseEvent): void {
       return
     }
     // Frame already selected → drag the frame (not the child)
-    const frameEl = cms.state.elements.find(el => el.id === topFrameId)
+    const frameEl = cms.state.elements.find((el) => el.id === topFrameId)
     if (frameEl) beginDragFor(frameEl, e)
     return
   }
@@ -226,7 +245,12 @@ async function onDblClick(): Promise<void> {
     return
   }
 
-  if (props.element.type === 'text' || props.element.type === 'shape' || props.element.type === 'code' || props.element.type === 'button') {
+  if (
+    props.element.type === 'text' ||
+    props.element.type === 'shape' ||
+    props.element.type === 'code' ||
+    props.element.type === 'button'
+  ) {
     cms.setEditing(props.element.id)
   }
 }
@@ -234,33 +258,65 @@ async function onDblClick(): Promise<void> {
 
 <template>
   <div
-    :class="['canvas-el', { selected: isSelected && !cms.state.preview, editing: isEditing, locked: element.locked, preview: cms.state.preview, responsive: element.responsive }]"
+    :class="[
+      'canvas-el',
+      {
+        selected: isSelected && !cms.state.preview,
+        editing: isEditing,
+        locked: element.locked,
+        preview: cms.state.preview,
+        responsive: element.responsive,
+      },
+    ]"
     :style="{
       position: 'absolute',
-      left: element.x + 'px', top: element.y + 'px',
-      width: element.width + 'px', height: element.height + 'px',
+      left: element.x + 'px',
+      top: element.y + 'px',
+      width: element.width + 'px',
+      height: element.height + 'px',
       ...clipStyle,
     }"
     @mousedown="onMouseDown"
     @dblclick="onDblClick"
   >
     <!-- Floating frame label — drag handle: select + drag in one motion -->
-    <div v-if="isFrame && !cms.state.preview" class="canvas-el-frame-label"
-      @mousedown="onLabelMouseDown">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="opacity:.6">
-        <circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/>
-        <circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>
-        <circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>
+    <div
+      v-if="isFrame && !cms.state.preview"
+      class="canvas-el-frame-label"
+      @mousedown="onLabelMouseDown"
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        style="opacity: 0.6"
+      >
+        <circle cx="9" cy="6" r="1" />
+        <circle cx="15" cy="6" r="1" />
+        <circle cx="9" cy="12" r="1" />
+        <circle cx="15" cy="12" r="1" />
+        <circle cx="9" cy="18" r="1" />
+        <circle cx="15" cy="18" r="1" />
       </svg>
       {{ element.name || 'Frame' }}
     </div>
     <!-- Inner wrapper carries opacity so label + selection outline stay visible at 0 opacity -->
-    <div :style="{
-      width: '100%', height: '100%',
-      opacity: element.styles.opacity != null ? element.styles.opacity : 1,
-    }">
+    <div
+      :style="{
+        width: '100%',
+        height: '100%',
+        opacity: element.styles.opacity != null ? element.styles.opacity : 1,
+      }"
+    >
       <component :is="activeRenderer" :element="element" :is-editing="isEditing" />
     </div>
-    <ResizeHandles v-if="isSelected && !element.locked && !isEditing && !cms.state.preview" :element="element" />
+    <ResizeHandles
+      v-if="isSelected && !element.locked && !isEditing && !cms.state.preview"
+      :element="element"
+    />
   </div>
 </template>

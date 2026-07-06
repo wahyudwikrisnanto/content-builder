@@ -10,17 +10,17 @@ A visual content editor for designing structured course layouts. Drop elements o
 
 Drag any combination of elements onto a resizable canvas:
 
-| Element | Description |
-| --- | --- |
-| **Text** | Rich inline text with full typography control |
-| **Image** | Responsive images with border & shadow options |
-| **Video** | Embed video content directly on the canvas |
-| **Button** | Styled call-to-action buttons |
-| **Code** | Syntax-highlighted code blocks via highlight.js |
-| **Divider** | Horizontal rules for visual separation |
-| **Shape** | Decorative geometric shapes |
-| **Container** | Group and nest multiple elements |
-| **Frame** | Bordered section wrappers |
+| Element       | Description                                     |
+| ------------- | ----------------------------------------------- |
+| **Text**      | Rich inline text with full typography control   |
+| **Image**     | Responsive images with border & shadow options  |
+| **Video**     | Embed video content directly on the canvas      |
+| **Button**    | Styled call-to-action buttons                   |
+| **Code**      | Syntax-highlighted code blocks via highlight.js |
+| **Divider**   | Horizontal rules for visual separation          |
+| **Shape**     | Decorative geometric shapes                     |
+| **Container** | Group and nest multiple elements                |
+| **Frame**     | Bordered section wrappers                       |
 
 ---
 
@@ -38,12 +38,12 @@ Drag any combination of elements onto a resizable canvas:
 
 ## Tech Stack
 
-| Layer | Tech |
-| --- | --- |
-| Framework | Vue 3 — Composition API, `<script setup>` |
-| Language | TypeScript |
-| Build | Vite |
-| Syntax highlighting | highlight.js |
+| Layer               | Tech                                      |
+| ------------------- | ----------------------------------------- |
+| Framework           | Vue 3 — Composition API, `<script setup>` |
+| Language            | TypeScript                                |
+| Build               | Vite                                      |
+| Syntax highlighting | highlight.js                              |
 
 ---
 
@@ -84,13 +84,13 @@ app/
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-| --- | --- |
-| `Ctrl+Z` | Undo |
-| `Ctrl+Shift+Z` / `Ctrl+Y` | Redo |
-| `Ctrl+D` | Duplicate selected element |
-| `Delete` / `Backspace` | Delete selected element |
-| `Escape` | Deselect / close preview / exit fullscreen |
+| Shortcut                  | Action                                     |
+| ------------------------- | ------------------------------------------ |
+| `Ctrl+Z`                  | Undo                                       |
+| `Ctrl+Shift+Z` / `Ctrl+Y` | Redo                                       |
+| `Ctrl+D`                  | Duplicate selected element                 |
+| `Delete` / `Backspace`    | Delete selected element                    |
+| `Escape`                  | Deselect / close preview / exit fullscreen |
 
 ---
 
@@ -100,61 +100,61 @@ The canvas state is an array of `CmsElement` objects. Here's the full shape:
 
 ```jsonc
 {
-  "id": "el-1719000000001",      // auto-generated unique ID
-  "type": "text",                // element type (see below)
-  "x": 60,                       // left position on canvas (px)
-  "y": 60,                       // top position on canvas (px)
-  "width": 320,                  // element width (px)
-  "height": 56,                  // element height (px)
-  "content": "Heading",          // inner content (text, URL, code, etc.)
-  "visible": true,               // shown/hidden on canvas
-  "locked": false,               // locked elements can't be moved/edited
-  "parentId": null,              // ID of parent container/frame, or null
+  "id": "el-1719000000001", // auto-generated unique ID
+  "type": "text", // element type (see below)
+  "x": 60, // left position on canvas (px)
+  "y": 60, // top position on canvas (px)
+  "width": 320, // element width (px)
+  "height": 56, // element height (px)
+  "content": "Heading", // inner content (text, URL, code, etc.)
+  "visible": true, // shown/hidden on canvas
+  "locked": false, // locked elements can't be moved/edited
+  "parentId": null, // ID of parent container/frame, or null
 
   // type-specific optional fields
-  "name": "Frame",               // display label (frame, container)
-  "shapeType": "rect",           // shape only: "rect" | "circle" | "line"
-  "language": "javascript",      // code only: highlight.js language key
-  "copyEnabled": true,           // code only: show copy button
+  "name": "Frame", // display label (frame, container)
+  "shapeType": "rect", // shape only: "rect" | "circle" | "line"
+  "language": "javascript", // code only: highlight.js language key
+  "copyEnabled": true, // code only: show copy button
   "href": "https://example.com", // button only: link URL
-  "target": "_blank",            // button only: "_self" | "_blank"
+  "target": "_blank", // button only: "_self" | "_blank"
 
   "styles": {
-    "fontSize": 36,              // px
-    "fontWeight": "700",         // "300" | "400" | "500" | "600" | "700"
-    "fontStyle": "normal",       // "normal" | "italic"
-    "textDecoration": "none",    // "none" | "underline"
-    "color": "#222222",          // text color (hex)
+    "fontSize": 36, // px
+    "fontWeight": "700", // "300" | "400" | "500" | "600" | "700"
+    "fontStyle": "normal", // "normal" | "italic"
+    "textDecoration": "none", // "none" | "underline"
+    "color": "#222222", // text color (hex)
     "backgroundColor": "#FFFFFF",
-    "textAlign": "left",         // "left" | "center" | "right" | "justify"
+    "textAlign": "left", // "left" | "center" | "right" | "justify"
     "lineHeight": 1.5,
-    "letterSpacing": 0,          // px
-    "borderRadius": 8,           // px
-    "padding": 10,               // px
-    "borderWidth": 1,            // px
+    "letterSpacing": 0, // px
+    "borderRadius": 8, // px
+    "padding": 10, // px
+    "borderWidth": 1, // px
     "borderColor": "#DDDDDD",
-    "opacity": 1,                // 0–1
-    "objectFit": "cover",        // image only: "cover" | "contain" | "fill"
-    "listType": "none",          // text only: "none" | "bullet" | "number"
-    "textStrokeWidth": 0,        // px
-    "textStrokeColor": "#000000"
-  }
+    "opacity": 1, // 0–1
+    "objectFit": "cover", // image only: "cover" | "contain" | "fill"
+    "listType": "none", // text only: "none" | "bullet" | "number"
+    "textStrokeWidth": 0, // px
+    "textStrokeColor": "#000000",
+  },
 }
 ```
 
 ### Element Types
 
-| `type` | `content` field | Notes |
-| --- | --- | --- |
-| `text` | Inline HTML text | Supports `listType`, text stroke, all typography styles |
-| `image` | Image URL | `objectFit` controls scaling |
-| `video` | Video URL or embed | |
-| `button` | Button label text | Has `href` + `target` fields |
-| `code` | Raw source code | Has `language` + `copyEnabled` fields |
-| `divider` | _(empty)_ | Thin horizontal rule |
-| `shape` | _(empty)_ | Has `shapeType`: `rect`, `circle`, or `line` |
-| `container` | _(empty)_ | Groups child elements via `parentId` |
-| `frame` | _(empty)_ | Named section wrapper, children use `parentId` |
+| `type`      | `content` field    | Notes                                                   |
+| ----------- | ------------------ | ------------------------------------------------------- |
+| `text`      | Inline HTML text   | Supports `listType`, text stroke, all typography styles |
+| `image`     | Image URL          | `objectFit` controls scaling                            |
+| `video`     | Video URL or embed |                                                         |
+| `button`    | Button label text  | Has `href` + `target` fields                            |
+| `code`      | Raw source code    | Has `language` + `copyEnabled` fields                   |
+| `divider`   | _(empty)_          | Thin horizontal rule                                    |
+| `shape`     | _(empty)_          | Has `shapeType`: `rect`, `circle`, or `line`            |
+| `container` | _(empty)_          | Groups child elements via `parentId`                    |
+| `frame`     | _(empty)_          | Named section wrapper, children use `parentId`          |
 
 ### Nesting
 

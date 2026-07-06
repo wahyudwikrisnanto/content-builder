@@ -47,7 +47,10 @@ export function usePlugins(): CmsPlugin[] {
   return inject<CmsPlugin[]>(PLUGINS_KEY, [])
 }
 
-export function matchesElement(match: RendererPlugin['match'] | DialogPlugin['match'], el: CmsElement): boolean {
+export function matchesElement(
+  match: RendererPlugin['match'] | DialogPlugin['match'],
+  el: CmsElement,
+): boolean {
   if (typeof match === 'function') return match(el)
   if (Array.isArray(match)) return match.includes(el.type)
   return match === el.type
@@ -61,7 +64,7 @@ export function findRendererPlugin(plugins: CmsPlugin[], el: CmsElement): Render
 }
 
 export function findDialogPlugins(plugins: CmsPlugin[], el: CmsElement): DialogPlugin[] {
-  return plugins.filter(p => p.type === 'dialog' && matchesElement(p.match, el)) as DialogPlugin[]
+  return plugins.filter((p) => p.type === 'dialog' && matchesElement(p.match, el)) as DialogPlugin[]
 }
 
 export function findActivatorPlugin(plugins: CmsPlugin[], el: CmsElement): ActivatorPlugin | null {

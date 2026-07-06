@@ -1,8 +1,18 @@
 import type { CmsElement } from '../types'
 
-export interface BBox { x: number; y: number; width: number; height: number }
+export interface BBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
 
-export function clampPos(b: BBox, canvasW: number, canvasH: number, flexibleHeight: boolean): { x: number; y: number } {
+export function clampPos(
+  b: BBox,
+  canvasW: number,
+  canvasH: number,
+  flexibleHeight: boolean,
+): { x: number; y: number } {
   const maxX = Math.max(0, canvasW - b.width)
   const x = Math.min(maxX, Math.max(0, b.x))
   if (flexibleHeight) return { x, y: Math.max(0, b.y) }
@@ -11,7 +21,12 @@ export function clampPos(b: BBox, canvasW: number, canvasH: number, flexibleHeig
   return { x, y }
 }
 
-export function clampSize(b: BBox, canvasW: number, canvasH: number, flexibleHeight: boolean): BBox {
+export function clampSize(
+  b: BBox,
+  canvasW: number,
+  canvasH: number,
+  flexibleHeight: boolean,
+): BBox {
   const width = Math.min(b.width, canvasW)
   const height = flexibleHeight ? b.height : Math.min(b.height, canvasH)
   const x = Math.min(Math.max(0, b.x), canvasW - width)

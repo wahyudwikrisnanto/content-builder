@@ -20,43 +20,81 @@ const MyImagePickerDialog = defineComponent({
       'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800',
       'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=800',
     ]
-    return () => h('div', {
-      style: 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99999',
-      onMousedown: (e: MouseEvent) => { if (e.target === e.currentTarget) emit('close') },
-    }, [
-      h('div', { style: 'background:#fff;border-radius:12px;padding:24px;width:480px;max-width:92vw;font-family:system-ui,sans-serif' }, [
-        h('h3', { style: 'margin:0 0 16px;font-size:15px;font-weight:600' }, 'Pick an image'),
-        // Sample thumbnails
-        h('div', { style: 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px' },
-          SAMPLES.map(src =>
-            h('img', {
-              src, alt: '', draggable: false,
-              style: `width:100%;height:90px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid ${url.value === src ? '#2563EB' : 'transparent'}`,
-              onClick: () => { url.value = src },
-            })
-          )
-        ),
-        // Manual URL input
-        h('input', {
-          value: url.value,
-          placeholder: 'Or paste a URL…',
-          style: 'width:100%;padding:8px 10px;border:1.5px solid #D1D5DB;border-radius:7px;font-size:13px;box-sizing:border-box;outline:none',
-          onInput: (e: Event) => { url.value = (e.target as HTMLInputElement).value },
-        }),
-        // Actions
-        h('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:16px' }, [
-          h('button', {
-            style: 'padding:7px 14px;border-radius:7px;border:1px solid #D1D5DB;background:#fff;font-size:13px;cursor:pointer',
-            onClick: () => emit('close'),
-          }, 'Cancel'),
-          h('button', {
-            style: `padding:7px 14px;border-radius:7px;border:none;background:#2563EB;color:#fff;font-size:13px;cursor:pointer;opacity:${url.value.trim() ? 1 : 0.4}`,
-            disabled: !url.value.trim(),
-            onClick: () => { if (url.value.trim()) emit('confirm', url.value.trim()) },
-          }, 'Apply'),
-        ]),
-      ]),
-    ])
+    return () =>
+      h(
+        'div',
+        {
+          style:
+            'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99999',
+          onMousedown: (e: MouseEvent) => {
+            if (e.target === e.currentTarget) emit('close')
+          },
+        },
+        [
+          h(
+            'div',
+            {
+              style:
+                'background:#fff;border-radius:12px;padding:24px;width:480px;max-width:92vw;font-family:system-ui,sans-serif',
+            },
+            [
+              h('h3', { style: 'margin:0 0 16px;font-size:15px;font-weight:600' }, 'Pick an image'),
+              // Sample thumbnails
+              h(
+                'div',
+                {
+                  style:
+                    'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px',
+                },
+                SAMPLES.map((src) =>
+                  h('img', {
+                    src,
+                    alt: '',
+                    draggable: false,
+                    style: `width:100%;height:90px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid ${url.value === src ? '#2563EB' : 'transparent'}`,
+                    onClick: () => {
+                      url.value = src
+                    },
+                  }),
+                ),
+              ),
+              // Manual URL input
+              h('input', {
+                value: url.value,
+                placeholder: 'Or paste a URL…',
+                style:
+                  'width:100%;padding:8px 10px;border:1.5px solid #D1D5DB;border-radius:7px;font-size:13px;box-sizing:border-box;outline:none',
+                onInput: (e: Event) => {
+                  url.value = (e.target as HTMLInputElement).value
+                },
+              }),
+              // Actions
+              h('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:16px' }, [
+                h(
+                  'button',
+                  {
+                    style:
+                      'padding:7px 14px;border-radius:7px;border:1px solid #D1D5DB;background:#fff;font-size:13px;cursor:pointer',
+                    onClick: () => emit('close'),
+                  },
+                  'Cancel',
+                ),
+                h(
+                  'button',
+                  {
+                    style: `padding:7px 14px;border-radius:7px;border:none;background:#2563EB;color:#fff;font-size:13px;cursor:pointer;opacity:${url.value.trim() ? 1 : 0.4}`,
+                    disabled: !url.value.trim(),
+                    onClick: () => {
+                      if (url.value.trim()) emit('confirm', url.value.trim())
+                    },
+                  },
+                  'Apply',
+                ),
+              ]),
+            ],
+          ),
+        ],
+      )
   },
 })
 
@@ -71,16 +109,14 @@ const imageActivator: ActivatorPlugin = {
   },
 }
 
-const plugins: CmsPlugin[] = [
-  imageActivator,
-]
+const plugins: CmsPlugin[] = [imageActivator]
 
 const config: BuilderConfig = {
   // Two canvas sizes — first is default on mount
   canvasSizes: [
     { label: 'Desktop', w: 1200, h: 900, default: true },
-    { label: 'Mobile',  w: 375,  h: 812 },
-    { label: 'Email',   w: 600,  h: 800 },
+    { label: 'Mobile', w: 375, h: 812 },
+    { label: 'Email', w: 600, h: 800 },
   ],
   // Show only Elements and Layers tabs, rename Layers → "Structure"
   sidebar: {
@@ -139,8 +175,12 @@ function onMounted() {
 <template>
   <div class="dev-shell">
     <div class="dev-tabs">
-      <button :class="['dev-tab', { active: tab === 'builder' }]" @click="tab = 'builder'">Builder</button>
-      <button :class="['dev-tab', { active: tab === 'renderer' }]" @click="tab = 'renderer'">Renderer</button>
+      <button :class="['dev-tab', { active: tab === 'builder' }]" @click="tab = 'builder'">
+        Builder
+      </button>
+      <button :class="['dev-tab', { active: tab === 'renderer' }]" @click="tab = 'renderer'">
+        Renderer
+      </button>
     </div>
 
     <div class="dev-tab-content">
@@ -168,7 +208,12 @@ function onMounted() {
         </div>
         <div class="renderer-test-pane renderer-json">
           <div class="renderer-test-label">JSON</div>
-          <textarea class="renderer-json-area" :value="json" @input="json = ($event.target as HTMLTextAreaElement).value" spellcheck="false" />
+          <textarea
+            class="renderer-json-area"
+            :value="json"
+            @input="json = ($event.target as HTMLTextAreaElement).value"
+            spellcheck="false"
+          />
         </div>
       </div>
     </div>
@@ -201,11 +246,19 @@ function onMounted() {
   cursor: pointer;
   background: transparent;
   color: #a3a3a3;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 }
 
-.dev-tab:hover { background: rgba(255,255,255,0.08); color: #e5e5e3; }
-.dev-tab.active { background: rgba(255,255,255,0.13); color: #ffffff; }
+.dev-tab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5e5e3;
+}
+.dev-tab.active {
+  background: rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+}
 
 .dev-tab-content {
   flex: 1;
@@ -214,7 +267,10 @@ function onMounted() {
   flex-direction: column;
 }
 
-.dev-tab-content > .cb-root { flex: 1; min-height: 0; }
+.dev-tab-content > .cb-root {
+  flex: 1;
+  min-height: 0;
+}
 
 /* Renderer test layout */
 .renderer-test {
@@ -232,7 +288,9 @@ function onMounted() {
   min-width: 0;
   border-right: 1px solid #e5e5e3;
 }
-.renderer-test-pane:last-child { border-right: none; }
+.renderer-test-pane:last-child {
+  border-right: none;
+}
 
 .renderer-test-label {
   display: flex;
@@ -261,7 +319,10 @@ function onMounted() {
   cursor: pointer;
   margin-left: auto;
 }
-.renderer-toggle input { cursor: pointer; accent-color: #2563eb; }
+.renderer-toggle input {
+  cursor: pointer;
+  accent-color: #2563eb;
+}
 
 .renderer-test-scroll {
   flex: 1;

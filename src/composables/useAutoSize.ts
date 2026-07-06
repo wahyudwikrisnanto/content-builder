@@ -30,16 +30,20 @@ export function useAutoSize(
     }
   }
 
-  function schedule(): void { nextTick(measure) }
+  function schedule(): void {
+    nextTick(measure)
+  }
 
   function rebind(): void {
     const node = getNode()
     if (node === observed) return
-    ro?.disconnect(); mo?.disconnect()
+    ro?.disconnect()
+    mo?.disconnect()
     observed = node
     if (!node) return
     if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(schedule); ro.observe(node)
+      ro = new ResizeObserver(schedule)
+      ro.observe(node)
     }
     if (typeof MutationObserver !== 'undefined') {
       mo = new MutationObserver(schedule)
@@ -47,8 +51,19 @@ export function useAutoSize(
     }
   }
 
-  onMounted(() => { rebind(); schedule() })
-  onUnmounted(() => { ro?.disconnect(); mo?.disconnect(); ro = mo = null; observed = null })
+  onMounted(() => {
+    rebind()
+    schedule()
+  })
+  onUnmounted(() => {
+    ro?.disconnect()
+    mo?.disconnect()
+    ro = mo = null
+    observed = null
+  })
 
-  watch(deps, () => { rebind(); schedule() })
+  watch(deps, () => {
+    rebind()
+    schedule()
+  })
 }

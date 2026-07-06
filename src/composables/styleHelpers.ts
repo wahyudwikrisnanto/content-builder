@@ -6,10 +6,10 @@ import type { ElementStyles } from '../types'
  */
 export function paddingValue(s: ElementStyles): string | undefined {
   const base = s.padding
-  const t = s.paddingTop    ?? base
-  const r = s.paddingRight  ?? base
+  const t = s.paddingTop ?? base
+  const r = s.paddingRight ?? base
   const b = s.paddingBottom ?? base
-  const l = s.paddingLeft   ?? base
+  const l = s.paddingLeft ?? base
   if (t == null && r == null && b == null && l == null) return undefined
   return `${t ?? 0}px ${r ?? 0}px ${b ?? 0}px ${l ?? 0}px`
 }

@@ -42,17 +42,28 @@ export function computeSnap(
   parentBox?: { x: number; y: number; width: number; height: number },
 ): SnapResult {
   const me = elEdges(moving)
-  const targets: { edges: EdgeSet; bbox: { x: number; y: number; width: number; height: number } }[] = [
-    { edges: canvasEdges(canvasWidth, canvasHeight), bbox: { x: 0, y: 0, width: canvasWidth, height: canvasHeight } },
-    ...siblings.map(s => ({ edges: elEdges(s), bbox: { x: s.x, y: s.y, width: s.width, height: s.height } })),
+  const targets: {
+    edges: EdgeSet
+    bbox: { x: number; y: number; width: number; height: number }
+  }[] = [
+    {
+      edges: canvasEdges(canvasWidth, canvasHeight),
+      bbox: { x: 0, y: 0, width: canvasWidth, height: canvasHeight },
+    },
+    ...siblings.map((s) => ({
+      edges: elEdges(s),
+      bbox: { x: s.x, y: s.y, width: s.width, height: s.height },
+    })),
   ]
   // Snap to parent frame's inner padding box (edges + centers)
   if (parentBox) {
     targets.push({ edges: elEdges(parentBox), bbox: parentBox })
   }
 
-  let dx = 0, dy = 0
-  let bestX = threshold + 1, bestY = threshold + 1
+  let dx = 0,
+    dy = 0
+  let bestX = threshold + 1,
+    bestY = threshold + 1
   const guides: Guide[] = []
 
   // x-axis (vertical guide lines): match my left/centerX/right against each target
@@ -61,14 +72,20 @@ export function computeSnap(
       for (let i = 0; i < me.vx.length; i++) {
         const d = tx - me.vx[i]
         const abs = Math.abs(d)
-        if (abs <= threshold && abs < bestX) { bestX = abs; dx = d }
+        if (abs <= threshold && abs < bestX) {
+          bestX = abs
+          dx = d
+        }
       }
     }
     for (const ty of t.edges.vy) {
       for (let i = 0; i < me.vy.length; i++) {
         const d = ty - me.vy[i]
         const abs = Math.abs(d)
-        if (abs <= threshold && abs < bestY) { bestY = abs; dy = d }
+        if (abs <= threshold && abs < bestY) {
+          bestY = abs
+          dy = d
+        }
       }
     }
   }
@@ -109,11 +126,13 @@ function dedupeGuides(gs: Guide[]): Guide[] {
     const key = `${g.axis}:${Math.round(g.pos * 10) / 10}`
     const prev = seen.get(key)
     if (!prev) seen.set(key, g)
-    else seen.set(key, {
-      axis: g.axis, pos: g.pos,
-      start: Math.min(prev.start, g.start),
-      end: Math.max(prev.end, g.end),
-    })
+    else
+      seen.set(key, {
+        axis: g.axis,
+        pos: g.pos,
+        start: Math.min(prev.start, g.start),
+        end: Math.max(prev.end, g.end),
+      })
   }
   return [...seen.values()]
 }

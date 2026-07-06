@@ -37,7 +37,8 @@ onMounted(() => {
   const el = scrollRef.value
   if (!el) return
   const rect = el.getBoundingClientRect()
-  const padX = 80, padY = 100
+  const padX = 80,
+    padY = 100
   const fitZoom = Math.min(
     (rect.width - padX) / cms.state.canvasWidth,
     (rect.height - padY) / cms.state.canvasHeight,
@@ -54,7 +55,8 @@ onUnmounted(() => {
 })
 
 function onDrop(e: DragEvent): void {
-  e.preventDefault(); dragOver.value = false
+  e.preventDefault()
+  dragOver.value = false
   if (!canvasRef.value || !e.dataTransfer) return
   const type = e.dataTransfer.getData('text/plain') as FactoryKey
   const rect = canvasRef.value.getBoundingClientRect()
@@ -80,7 +82,8 @@ function onScrollMouseDown(e: MouseEvent): void {
   cms.select(null)
   cms.state.allSelected = false
 
-  const startCX = e.clientX, startCY = e.clientY
+  const startCX = e.clientX,
+    startCY = e.clientY
   let dragging = false
 
   const onMove = (ev: MouseEvent): void => {
@@ -99,11 +102,12 @@ function onScrollMouseDown(e: MouseEvent): void {
       const ry1 = (Math.min(cy1, cy2) - canvasRect.top) / z
       const rx2 = (Math.max(cx1, cx2) - canvasRect.left) / z
       const ry2 = (Math.max(cy1, cy2) - canvasRect.top) / z
-      const hits = cms.state.elements.filter(el => {
-        if (!cms.isEffectivelyVisible(el.id)) return false
-        return el.x < rx2 && el.x + el.width > rx1 &&
-               el.y < ry2 && el.y + el.height > ry1
-      }).map(el => el.id)
+      const hits = cms.state.elements
+        .filter((el) => {
+          if (!cms.isEffectivelyVisible(el.id)) return false
+          return el.x < rx2 && el.x + el.width > rx1 && el.y < ry2 && el.y + el.height > ry1
+        })
+        .map((el) => el.id)
       if (hits.length > 1) cms.setSelectedIds(hits)
       else if (hits.length === 1) cms.select(hits[0])
     }
@@ -118,16 +122,22 @@ function onScrollMouseDown(e: MouseEvent): void {
 <template>
   <div class="workspace">
     <div class="canvas-scroll" ref="scrollRef" @mousedown="onScrollMouseDown">
-      <div class="canvas-wrapper"
-        :style="{ width: cms.state.canvasWidth * cms.state.zoom + 'px',
-                  height: cms.effectiveHeight.value * cms.state.zoom + 'px' }">
+      <div
+        class="canvas-wrapper"
+        :style="{
+          width: cms.state.canvasWidth * cms.state.zoom + 'px',
+          height: cms.effectiveHeight.value * cms.state.zoom + 'px',
+        }"
+      >
         <div
           ref="canvasRef"
           :class="['canvas', { 'drag-over': dragOver }]"
-          :style="{ width: cms.state.canvasWidth + 'px',
-                    height: cms.effectiveHeight.value + 'px',
-                    transform: `scale(${cms.state.zoom})`,
-                    transformOrigin: 'top left' }"
+          :style="{
+            width: cms.state.canvasWidth + 'px',
+            height: cms.effectiveHeight.value + 'px',
+            transform: `scale(${cms.state.zoom})`,
+            transformOrigin: 'top left',
+          }"
           @dragover.prevent="dragOver = true"
           @dragleave="dragOver = false"
           @drop="onDrop"
@@ -135,9 +145,12 @@ function onScrollMouseDown(e: MouseEvent): void {
           <div class="canvas-inner" :style="{ position: 'absolute', inset: 0 }"></div>
 
           <template v-for="el in cms.state.elements" :key="el.id">
-            <CanvasElement v-if="cms.isEffectivelyVisible(el.id)" :element="el"
+            <CanvasElement
+              v-if="cms.isEffectivelyVisible(el.id)"
+              :element="el"
               :is-selected="el.id === cms.state.selectedId || cms.state.selectedIds.includes(el.id)"
-              :is-editing="el.id === cms.state.editingTextId" />
+              :is-editing="el.id === cms.state.editingTextId"
+            />
           </template>
 
           <Guides />
@@ -148,7 +161,7 @@ function onScrollMouseDown(e: MouseEvent): void {
 
           <div v-if="!cms.state.elements.length && !dragOver" class="canvas-empty">
             <Icon name="move" :size="32" :style="{ opacity: 0.2 }" />
-            <p>Drag elements here<br/>or click from sidebar</p>
+            <p>Drag elements here<br />or click from sidebar</p>
           </div>
         </div>
       </div>

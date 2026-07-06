@@ -10,7 +10,10 @@ function onKey(e: KeyboardEvent): void {
   altDown.value = e.altKey
   shiftDown.value = e.shiftKey
 }
-function onBlur(): void { altDown.value = false; shiftDown.value = false }
+function onBlur(): void {
+  altDown.value = false
+  shiftDown.value = false
+}
 
 function bind(): void {
   if (bound) return
@@ -28,8 +31,17 @@ function unbind(): void {
 }
 
 export function useModifierKeys() {
-  onMounted(() => { refs++; bind() })
-  onUnmounted(() => { refs--; if (refs <= 0) { refs = 0; unbind() } })
+  onMounted(() => {
+    refs++
+    bind()
+  })
+  onUnmounted(() => {
+    refs--
+    if (refs <= 0) {
+      refs = 0
+      unbind()
+    }
+  })
   return { altDown, shiftDown }
 }
 

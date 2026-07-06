@@ -10,13 +10,20 @@ const stageRef = ref<HTMLElement | null>(null)
 const responsive = ref(false)
 let unbind: (() => void) | null = null
 
-onMounted(() => { if (stageRef.value) unbind = bindCopyButtons(stageRef.value) })
-onUnmounted(() => { unbind?.() })
-watch(() => cms.state.elements.length, async () => {
-  await nextTick()
-  unbind?.()
+onMounted(() => {
   if (stageRef.value) unbind = bindCopyButtons(stageRef.value)
 })
+onUnmounted(() => {
+  unbind?.()
+})
+watch(
+  () => cms.state.elements.length,
+  async () => {
+    await nextTick()
+    unbind?.()
+    if (stageRef.value) unbind = bindCopyButtons(stageRef.value)
+  },
+)
 
 const payload = computed(() => ({
   canvas: {
@@ -28,9 +35,7 @@ const payload = computed(() => ({
 }))
 
 const html = computed(() =>
-  responsive.value
-    ? renderFlowHtml(payload.value)
-    : renderHtml(payload.value),
+  responsive.value ? renderFlowHtml(payload.value) : renderHtml(payload.value),
 )
 </script>
 
@@ -44,8 +49,11 @@ const html = computed(() =>
       >
         <Icon name="responsive" :size="17" />
       </button>
-      <button class="icon-btn" @click="cms.togglePreviewFullscreen()"
-        :title="cms.state.previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'">
+      <button
+        class="icon-btn"
+        @click="cms.togglePreviewFullscreen()"
+        :title="cms.state.previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'"
+      >
         <Icon :name="cms.state.previewFullscreen ? 'minimize' : 'maximize'" :size="17" />
       </button>
       <button class="icon-btn" @click="cms.togglePreview()" title="Exit preview (Esc)">
@@ -65,16 +73,25 @@ const html = computed(() =>
 
 <style scoped>
 .preview-view {
-  flex: 1; display: flex; flex-direction: column;
-  background: var(--bg); overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
   position: relative;
 }
 .preview-view.fullscreen {
-  position: fixed; inset: 0; z-index: 9999; background: #fff;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #fff;
 }
 .preview-toolbar {
-  position: absolute; top: 12px; right: 12px;
-  display: flex; gap: 4px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
@@ -83,8 +100,10 @@ const html = computed(() =>
   z-index: 10;
 }
 .preview-scroll {
-  flex: 1; overflow: auto;
-  display: flex; justify-content: center;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
   padding: 40px;
 }
 .preview-stage {
@@ -96,6 +115,10 @@ const html = computed(() =>
   max-width: 100%;
   box-shadow: none;
 }
-.preview-view.fullscreen .preview-scroll { padding: 0; }
-.preview-view.fullscreen .preview-stage { box-shadow: none; }
+.preview-view.fullscreen .preview-scroll {
+  padding: 0;
+}
+.preview-view.fullscreen .preview-stage {
+  box-shadow: none;
+}
 </style>

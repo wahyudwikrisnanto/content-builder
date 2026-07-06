@@ -16,7 +16,12 @@ export default defineConfig({
       fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
     },
     rollupOptions: {
-      external: ['vue', 'highlight.js', 'highlight.js/lib/common', 'highlight.js/styles/atom-one-dark.css'],
+      external: [
+        'vue',
+        'highlight.js',
+        'highlight.js/lib/common',
+        'highlight.js/styles/atom-one-dark.css',
+      ],
       output: {
         globals: { vue: 'Vue' },
         assetFileNames: 'style.css',
