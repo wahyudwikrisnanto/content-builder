@@ -138,9 +138,15 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   const align = frame.layoutAlign ?? 'start'
   const pad = sidePad(frame)
 
+  // Order children by their position in state.elements (the same ordering moveLayer/moveUp/
+  // moveDown maintain) rather than by current x/y. x/y are themselves last set by this very
+  // function, and estimated vs. later-measured text heights (or drag rounding) can nudge two
+  // siblings' coordinates close enough to flip a coordinate-based sort — silently reordering
+  // the stack on an unrelated edit instead of only when the user actually reorders them.
+  const order = new Map(state.elements.map((e, idx) => [e.id, idx]))
   const children = state.elements
     .filter(e => e.parentId === frameId)
-    .sort((a, b) => dir === 'vertical' ? a.y - b.y : a.x - b.x)
+    .sort((a, b) => order.get(a.id)! - order.get(b.id)!)
 
   let cursor = dir === 'vertical' ? frame.y + pad.t : frame.x + pad.l
   const nextElements = [...state.elements]
@@ -198,8 +204,56 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   state.elements = nextElements
 }
 
+/**
+ * Persist a drag-reorder within an auto-layout frame: reflowFrame sorts children by their
+ * position in state.elements (see reflowFrame), so dragging one past a sibling only changes
+ * x/y, not that array order — reflow would otherwise snap it right back. Call this once at
+ * drag-end, before reflowFrame, to write the post-drag spatial order back into state.elements
+ * so it sticks.
+ *
+ * `draggedId`, when given, is inserted by comparing its center against every OTHER child's
+ * center (never against itself) and takes the slot where it first falls before one. Sorting
+ * all children by raw edge position instead would tie whenever drag-snapping locks the
+ * dragged item exactly onto a sibling's edge — a very common case — and a tie loses to
+ * Array.sort's stability, silently keeping the old order even though the drop looked like a
+ * clean swap. Comparing centers against siblings only sidesteps that: the two coordinates
+ * being compared are never equal by construction (self is excluded from the anchor set).
+ */
+function reorderAutoLayoutChildren(frameId: string, draggedId?: string): void {
+  const frame = state.elements.find(e => e.id === frameId)
+  if (!frame || frame.type !== 'frame') return
+  const dir = frame.layoutDirection ?? 'none'
+  if (dir === 'none') return
+  const isChild = (e: CmsElement): boolean => e.parentId === frameId
+  const children = state.elements.filter(isChild)
+  if (children.length < 2) return
+  const center = (e: CmsElement): number => dir === 'vertical' ? e.y + e.height / 2 : e.x + e.width / 2
+
+  let sorted: CmsElement[]
+  const dragged = draggedId ? children.find(c => c.id === draggedId) : undefined
+  if (dragged) {
+    const others = children.filter(c => c.id !== dragged.id).sort((a, b) => center(a) - center(b))
+    const dc = center(dragged)
+    // <=, not <: equal-size siblings + edge-snapping means dropping "onto" a sibling aligns
+    // both edges AND centers exactly. A strict "<" would treat that dead-even tie as "not
+    // before it" and leave the order unchanged — exactly the common case a same-size drag
+    // hits, and exactly what should reorder. Ties resolve to "insert before the tied sibling".
+    const insertAt = others.findIndex(o => dc <= center(o))
+    sorted = insertAt < 0 ? [...others, dragged] : [...others.slice(0, insertAt), dragged, ...others.slice(insertAt)]
+  } else {
+    sorted = [...children].sort((a, b) => center(a) - center(b))
+  }
+
+  const slots: number[] = []
+  state.elements.forEach((e, idx) => { if (isChild(e)) slots.push(idx) })
+  const next = [...state.elements]
+  slots.forEach((slotIdx, i) => { next[slotIdx] = sorted[i] })
+  state.elements = next
+}
+
 const actions = {
   reflowFrame,
+  reorderAutoLayoutChildren,
   /** Returns parent frame's inner padding box, or null if element has no frame parent. */
   parentInnerBox(el: CmsElement): { x: number; y: number; width: number; height: number } | null {
     if (!el.parentId) return null
@@ -407,6 +461,11 @@ const actions = {
     }
 
     state.elements = rest
+    // Reflow both ends of the move: the old parent's remaining children need to close the
+    // gap, and the new parent (if auto-layout) needs to slot the moved block into place —
+    // otherwise their x/y stay stale until some unrelated edit happens to trigger a reflow.
+    if (src.parentId && src.parentId !== newParentId) reflowFrame(src.parentId)
+    if (newParentId) reflowFrame(newParentId)
   },
   reparent(id: string, parentId: string | null, opts: { noHistory?: boolean } = {}): void {
     const i = findIdx(id); if (i < 0) return
@@ -437,9 +496,13 @@ const actions = {
     if (el.parentId !== target) {
       const updated = { ...el, parentId: target }
       state.elements = [...state.elements.filter(e => e.id !== id), updated]
+      // Only reflow here when the parent actually changed (close the old parent's gap, slot
+      // into the new one). Reflowing unconditionally — even for a same-frame drag — snaps the
+      // dragged element back into its pre-drag slot using the still-old array order, before
+      // the caller's own reorderAutoLayoutChildren gets a chance to read the dragged position.
+      if (prevParent) reflowFrame(prevParent)
+      if (target) reflowFrame(target)
     }
-    if (prevParent) reflowFrame(prevParent)
-    if (target) reflowFrame(target)
   },
   ungroupFrame(frameId: string): void {
     snapshot()
@@ -465,19 +528,31 @@ const actions = {
   },
   bringForward(id: string): void {
     const i = findIdx(id)
-    if (i < 0 || i >= state.elements.length - 1) return
+    if (i < 0) return
+    const el = state.elements[i]
+    // Swap with the next element that shares the same parent — a blind i+1 swap could cross
+    // into a different frame's children (or the top level), corrupting both groups' order.
+    let j = i + 1
+    while (j < state.elements.length && state.elements[j].parentId !== el.parentId) j++
+    if (j >= state.elements.length) return
     snapshot()
     const els = [...state.elements]
-    ;[els[i], els[i + 1]] = [els[i + 1], els[i]]
+    ;[els[i], els[j]] = [els[j], els[i]]
     state.elements = els
+    if (el.parentId) reflowFrame(el.parentId)
   },
   sendBackward(id: string): void {
     const i = findIdx(id)
-    if (i <= 0) return
+    if (i < 0) return
+    const el = state.elements[i]
+    let j = i - 1
+    while (j >= 0 && state.elements[j].parentId !== el.parentId) j--
+    if (j < 0) return
     snapshot()
     const els = [...state.elements]
-    ;[els[i], els[i - 1]] = [els[i - 1], els[i]]
+    ;[els[i], els[j]] = [els[j], els[i]]
     state.elements = els
+    if (el.parentId) reflowFrame(el.parentId)
   },
   duplicate(id: string): void {
     const el = state.elements.find(e => e.id === id)
@@ -487,6 +562,9 @@ const actions = {
     const sized = clampSize(dup, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
     Object.assign(dup, sized)
     state.elements.push(dup)
+    // Auto-layout siblings are positioned by reflowFrame, not the raw +20/+20 offset above —
+    // without this the duplicate floats at that offset until an unrelated edit forces a reflow.
+    if (dup.parentId) reflowFrame(dup.parentId)
     state.selectedId = dup.id
   },
   toggleVisible(id: string): void {

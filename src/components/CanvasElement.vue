@@ -128,6 +128,7 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       if (cur?.parentId) {
         const parent = cms.state.elements.find(e => e.id === cur.parentId)
         if (parent?.type === 'frame' && (parent.layoutDirection ?? 'none') !== 'none') {
+          cms.reorderAutoLayoutChildren(parent.id, target.id)
           cms.reflowFrame(parent.id)
         }
       }

@@ -17,6 +17,21 @@ function px(v: number | undefined, fallback = 0): string {
 // Set by renderHtml before iterating so per-element renderers can look up parents
 let _elementsById: Map<string, CmsElement> = new Map()
 
+// Text elements report height:0 until useAutoSize's ResizeObserver measures the mounted
+// DOM node (see useAutoSize.ts) — legit for elements never mounted (e.g. hand-authored or
+// freshly-created JSON). Treating that 0 literally makes an absolutely-positioned box with
+// zero height, and a clip-path:inset() anchored to a zero-size reference box clips away ALL
+// overflowing content — not just the excess past a clipContent frame's edge, but everything,
+// since clip-path (unlike plain overflow) doesn't defer to the box's visual/painted bounds.
+// Estimate the real height the same way importCKEditor.ts does so both the box itself and
+// any ancestor clip-path use a size that matches what's actually painted.
+function estimatedHeight(el: CmsElement): number {
+  if (el.height > 0 || el.type !== 'text') return el.height
+  const s = el.styles
+  const lines = Math.max(1, (el.content || '').split('\n').length)
+  return Math.ceil((s.fontSize ?? 16) * (s.lineHeight ?? 1.5) * lines + (s.padding ?? 0) * 2)
+}
+
 function computeClipInset(el: CmsElement): string {
   // Intersect the bounds of every ancestor frame with clipContent enabled
   let minX = -Infinity, minY = -Infinity, maxX = Infinity, maxY = Infinity
@@ -28,15 +43,16 @@ function computeClipInset(el: CmsElement): string {
       if (cur.x > minX) minX = cur.x
       if (cur.y > minY) minY = cur.y
       if (cur.x + cur.width  < maxX) maxX = cur.x + cur.width
-      if (cur.y + cur.height < maxY) maxY = cur.y + cur.height
+      if (cur.y + estimatedHeight(cur) < maxY) maxY = cur.y + estimatedHeight(cur)
     }
     cur = _elementsById.get(cur.parentId ?? '')
   }
   if (!has) return ''
+  const h = estimatedHeight(el)
   const top    = Math.max(0, minY - el.y)
   const left   = Math.max(0, minX - el.x)
   const right  = Math.max(0, (el.x + el.width)  - maxX)
-  const bottom = Math.max(0, (el.y + el.height) - maxY)
+  const bottom = Math.max(0, (el.y + h)  - maxY)
   return `clip-path:inset(${top}px ${right}px ${bottom}px ${left}px)`
 }
 
@@ -52,7 +68,7 @@ function commonBoxStyle(el: CmsElement): string {
   return [
     `position:absolute`,
     `left:${el.x}px`, `top:${el.y}px`,
-    `width:${el.width}px`, `height:${el.height}px`,
+    `width:${el.width}px`, `height:${estimatedHeight(el)}px`,
     `opacity:${opacity}`,
     clip,
   ].filter(Boolean).join(';')
@@ -358,18 +374,9 @@ function flowTextCss(s: ElementStyles): string {
 let _autoFlex = 0
 
 // Gap math below (mt = nextEl.y - (prevEl.y + prevEl.height)) assumes el.height reflects
-// the element's real rendered height. Text elements are frequently authored/imported with
-// height:0 (auto-size sentinel — see importCKEditor.ts), which would otherwise make the
-// full y-distance (including the previous element's real content height) collapse into a
-// single oversized margin-top. Estimate the real height the same way importCKEditor does
-// so the gap left over is just the intended whitespace between blocks.
-function flowHeightOf(el: CmsElement): number {
-  if (el.height > 0) return el.height
-  if (el.type !== 'text') return el.height
-  const s = el.styles
-  const lines = Math.max(1, (el.content || '').split('\n').length)
-  return Math.ceil((s.fontSize ?? 16) * (s.lineHeight ?? 1.5) * lines + (s.padding ?? 0) * 2)
-}
+// the element's real rendered height, which would otherwise turn height:0 auto-size text
+// (see estimatedHeight above) into an oversized margin-top covering the missing height too.
+const flowHeightOf = estimatedHeight
 
 function flowWrap(el: CmsElement, mt: number, canvasW: number): string {
   const base = [
