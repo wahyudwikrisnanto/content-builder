@@ -320,7 +320,18 @@ export function renderHtml(payload: RenderPayload): string {
 // Y gaps become margin-top. No absolute positioning.
 // ---------------------------------------------------------------------------
 
-function flowTextCss(s: ElementStyles): string {
+// Box decoration (fill/border/radius) — kept separate from text styling so callers with a
+// distinct box-vs-content split (flowRenderShape) can apply it to the sized outer element
+// instead of the content div, which may be an unstretched flex child that hugs its content.
+function flowBoxCss(s: ElementStyles): string {
+  const parts: string[] = []
+  if (s.backgroundColor && s.backgroundColor !== 'transparent') parts.push(`background-color:${s.backgroundColor}`)
+  if (s.borderRadius != null) parts.push(`border-radius:${s.borderRadius}px`)
+  if (s.borderWidth) parts.push(`border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}`)
+  return parts.join(';')
+}
+
+function flowTextOnlyCss(s: ElementStyles): string {
   const parts: string[] = []
   if (s.fontSize != null) parts.push(`font-size:${s.fontSize}px`)
   if (s.fontWeight) parts.push(`font-weight:${s.fontWeight}`)
@@ -331,9 +342,6 @@ function flowTextCss(s: ElementStyles): string {
   if (s.lineHeight != null) parts.push(`line-height:${s.lineHeight}`)
   if (s.letterSpacing != null) parts.push(`letter-spacing:${s.letterSpacing}px`)
   if (s.padding != null) parts.push(`padding:${s.padding}px`)
-  if (s.backgroundColor && s.backgroundColor !== 'transparent') parts.push(`background-color:${s.backgroundColor}`)
-  if (s.borderRadius != null) parts.push(`border-radius:${s.borderRadius}px`)
-  if (s.borderWidth) parts.push(`border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}`)
   if (s.textStrokeWidth) {
     parts.push(`-webkit-text-stroke-width:${s.textStrokeWidth}px`)
     parts.push(`-webkit-text-stroke-color:${s.textStrokeColor || '#000'}`)
@@ -342,8 +350,26 @@ function flowTextCss(s: ElementStyles): string {
   return parts.join(';')
 }
 
+function flowTextCss(s: ElementStyles): string {
+  return [flowTextOnlyCss(s), flowBoxCss(s)].filter(Boolean).join(';')
+}
+
 // Module-level flag: when true, flowWrap skips alignment math (used inside flex parents)
 let _autoFlex = 0
+
+// Gap math below (mt = nextEl.y - (prevEl.y + prevEl.height)) assumes el.height reflects
+// the element's real rendered height. Text elements are frequently authored/imported with
+// height:0 (auto-size sentinel — see importCKEditor.ts), which would otherwise make the
+// full y-distance (including the previous element's real content height) collapse into a
+// single oversized margin-top. Estimate the real height the same way importCKEditor does
+// so the gap left over is just the intended whitespace between blocks.
+function flowHeightOf(el: CmsElement): number {
+  if (el.height > 0) return el.height
+  if (el.type !== 'text') return el.height
+  const s = el.styles
+  const lines = Math.max(1, (el.content || '').split('\n').length)
+  return Math.ceil((s.fontSize ?? 16) * (s.lineHeight ?? 1.5) * lines + (s.padding ?? 0) * 2)
+}
 
 function flowWrap(el: CmsElement, mt: number, canvasW: number): string {
   const base = [
@@ -398,13 +424,15 @@ function flowRenderImage(el: CmsElement, mt: number, cw: number): string {
 function flowRenderShape(el: CmsElement, mt: number, cw: number): string {
   const s = el.styles
   const lt = s.listType || 'none'
-  const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;font-family:inherit;${flowTextCss(s)}`
+  const justify = s.textAlign === 'right' ? 'flex-end' : s.textAlign === 'center' ? 'center' : 'flex-start'
+  const ar = el.width && el.height ? `aspect-ratio:${el.width}/${el.height}` : ''
+  const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;font-family:inherit;${flowTextOnlyCss(s)}`
   const inner = lt === 'bullet'
     ? `<ul style="${inner_css};margin:0;padding-left:1.5em">${(el.content || '').split('\n').map(l => `<li>${escape(l)}</li>`).join('')}</ul>`
     : lt === 'number'
     ? `<ol style="${inner_css};margin:0;padding-left:1.5em">${(el.content || '').split('\n').map(l => `<li>${escape(l)}</li>`).join('')}</ol>`
     : `<div style="${inner_css};white-space:pre-wrap">${escape(el.content || '')}</div>`
-  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}">${inner}</div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)};${ar};display:flex;align-items:center;justify-content:${justify};overflow:hidden;${flowBoxCss(s)}">${inner}</div>`
 }
 
 function flowRenderVideo(el: CmsElement, mt: number, cw: number): string {
@@ -553,7 +581,8 @@ export function renderFlowHtml(payload: RenderPayload): string {
         s.borderRadius != null ? `border-radius:${s.borderRadius}px` : '',
         s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}` : '',
         (pt || pr || pb || pl) ? `padding:${pt}px ${pr}px ${pb}px ${pl}px` : '',
-        clip ? `height:${el.height}px;overflow:hidden` : '',
+        clip ? `height:${el.height}px;overflow:hidden`
+          : el.type === 'frame' && el.manualHeight ? `height:${el.height}px` : '',
       ]
 
       const children = childrenOf(el.id)
@@ -572,6 +601,9 @@ export function renderFlowHtml(payload: RenderPayload): string {
           `flex-direction:${dir === 'vertical' ? 'column' : 'row'}`,
           `gap:${gap}px`,
           `align-items:${flexAlign}`,
+          // Horizontal auto-layout: let columns reflow to fewer-per-row (down to one)
+          // as the container narrows in responsive mode, instead of overflowing/squishing.
+          dir === 'vertical' ? '' : 'flex-wrap:wrap',
         )
         const parts: string[] = []
         _autoFlex++
@@ -611,7 +643,7 @@ export function renderFlowHtml(payload: RenderPayload): string {
           })()
           const inner = renderNode(relEl as CmsElement, 0, innerW)
           parts.push(`<div style="${gap ? `margin-top:${gap}px;` : ''}${alignCss};max-width:100%">${inner}</div>`)
-          prevBottom = relY + child.height
+          prevBottom = relY + flowHeightOf(child)
         }
       } finally {
         _autoFlex--
@@ -628,7 +660,7 @@ export function renderFlowHtml(payload: RenderPayload): string {
     // First element: no top margin. Otherwise: gap between elements (canvas Y difference).
     const mt = prevBottom < 0 ? 0 : Math.max(0, el.y - prevBottom)
     parts.push(renderNode(el, mt, canvasW))
-    prevBottom = el.y + el.height
+    prevBottom = el.y + flowHeightOf(el)
   }
 
   // `display:flow-root` establishes a BFC — prevents child margins from collapsing into this container

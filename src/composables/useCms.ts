@@ -108,6 +108,21 @@ function sidePad(frame: CmsElement): { t: number; r: number; b: number; l: numbe
 }
 
 /**
+ * Text elements report height:0 until useAutoSize's ResizeObserver measures the mounted
+ * DOM node (see useAutoSize.ts) — a brief but real window (e.g. right after creation, or
+ * for elements never mounted). Stacking children by raw `child.height` during that window
+ * packs them `layoutGap` apart with no allowance for the text's real content height,
+ * producing visible overlap. Estimate it the same way importCKEditor.ts does so the frame
+ * still reflows sensibly before the real measurement lands.
+ */
+function estimatedChildHeight(el: CmsElement): number {
+  if (el.height > 0 || el.type !== 'text') return el.height
+  const s = el.styles
+  const lines = Math.max(1, (el.content || '').split('\n').length)
+  return Math.ceil((s.fontSize ?? 16) * (s.lineHeight ?? 1.5) * lines + (s.padding ?? 0) * 2)
+}
+
+/**
  * Auto-layout: reposition (and stretch) direct children of a frame based on its layout config.
  * Children are placed vertically or horizontally with gap + per-side padding.
  * `skipGrow`: pass true when user manually resizes the frame so their size sticks.
@@ -141,7 +156,7 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
       else if (align === 'center')  { x = frame.x + (frame.width - w) / 2 }
       else if (align === 'end')     { x = frame.x + frame.width - pad.r - w }
       else                          { x = frame.x + pad.l }
-      cursor = y + h + gap
+      cursor = y + estimatedChildHeight(child) + gap
     } else {
       x = cursor
       if (align === 'stretch')      { y = frame.y + pad.t;                     h = Math.max(1, frame.height - pad.t - pad.b) }
