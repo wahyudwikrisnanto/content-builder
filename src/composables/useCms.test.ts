@@ -119,6 +119,26 @@ describe('autoReparent — rebases coordinates when entering a frame', () => {
   })
 })
 
+describe('moveMany — excludes a selected descendant of another selected element', () => {
+  it('does not double-shift a child that is directly co-selected with its parent frame', () => {
+    const frame = CmsFactories.frame(100, 100)
+    cms.addElement(frame)
+    const child = CmsFactories.text(20, 20)
+    child.parentId = frame.id
+    cms.addElement(child)
+
+    const originals = new Map(cms.state.elements.map((el) => [el.id, { x: el.x, y: el.y }]))
+    cms.moveMany([frame.id, child.id], originals, 50, 50)
+
+    const movedFrame = cms.state.elements.find((e) => e.id === frame.id)!
+    const movedChild = cms.state.elements.find((e) => e.id === child.id)!
+    expect(movedFrame.x).toBe(150)
+    expect(movedFrame.y).toBe(150)
+    expect(movedChild.x).toBe(20) // carried along by the frame, not shifted again
+    expect(movedChild.y).toBe(20)
+  })
+})
+
 describe('exportJson', () => {
   it('bumps the schema version to 2', () => {
     const payload = JSON.parse(cms.exportJson())

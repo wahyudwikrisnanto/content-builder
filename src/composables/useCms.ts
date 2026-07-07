@@ -459,7 +459,19 @@ const actions = {
     dy: number,
   ): void {
     if (!ids.length) return
-    const ownership = new Set<string>(ids)
+    const idSet = new Set(ids)
+    // Exclude any id whose nearest selected ancestor is itself already being moved — its
+    // coordinate is frame-relative, so it moves for free when that ancestor moves, and
+    // applying the same delta to it directly would double-shift it.
+    const isCarriedByAnotherSelected = (id: string): boolean => {
+      let cur = state.elements.find((e) => e.id === id)
+      while (cur?.parentId) {
+        if (idSet.has(cur.parentId)) return true
+        cur = state.elements.find((e) => e.id === cur!.parentId)
+      }
+      return false
+    }
+    const ownership = new Set<string>(ids.filter((id) => !isCarriedByAnotherSelected(id)))
     // Compute the group's original bounding box from originals + current sizes
     let minX = Infinity,
       minY = Infinity,
