@@ -50,6 +50,18 @@ function collectDescendantIds(parentId: string, elements: CmsElement[]): string[
   return out
 }
 
+function absolutePosition(el: CmsElement): { x: number; y: number } {
+  let x = 0,
+    y = 0
+  let cur: CmsElement | undefined = el
+  while (cur) {
+    x += cur.x
+    y += cur.y
+    cur = cur.parentId ? state.elements.find((e) => e.id === cur!.parentId) : undefined
+  }
+  return { x, y }
+}
+
 /**
  * Return the containing box for `el` — parent frame's padding zone, or canvas bounds.
  */
@@ -75,8 +87,8 @@ function framePaddingBox(frame: CmsElement): {
 } {
   const p = sidePad(frame)
   return {
-    x: frame.x + p.l,
-    y: frame.y + p.t,
+    x: p.l,
+    y: p.t,
     width: Math.max(0, frame.width - p.l - p.r),
     height: Math.max(0, frame.height - p.t - p.b),
   }
@@ -290,6 +302,7 @@ function reorderAutoLayoutChildren(frameId: string, draggedId?: string): void {
 const actions = {
   reflowFrame,
   reorderAutoLayoutChildren,
+  absolutePosition,
   /** Returns parent frame's inner padding box, or null if element has no frame parent. */
   parentInnerBox(el: CmsElement): { x: number; y: number; width: number; height: number } | null {
     if (!el.parentId) return null
@@ -425,27 +438,14 @@ const actions = {
     if (i < 0) return
     const el = state.elements[i]
     if (el.responsive) x = 0
-    let c = clampPos(
+    const c = clampPos(
       { x, y, width: el.width, height: el.height },
       state.canvasWidth,
       state.canvasHeight,
       state.flexibleHeight,
     )
     const clamped = clampInsideParent(el, { x: c.x, y: c.y })
-    c = { ...c, x: clamped.x, y: clamped.y }
-    const dx = c.x - el.x,
-      dy = c.y - el.y
-    state.elements[i] = { ...el, x: c.x, y: c.y }
-    // Move descendants with frame
-    if (el.type === 'frame' && (dx || dy)) {
-      const descendants = collectDescendantIds(id, state.elements)
-      for (const did of descendants) {
-        const j = findIdx(did)
-        if (j < 0) continue
-        const d = state.elements[j]
-        state.elements[j] = { ...d, x: d.x + dx, y: d.y + dy }
-      }
-    }
+    state.elements[i] = { ...el, x: clamped.x, y: clamped.y }
   },
   /**
    * Set positions of many elements from absolute (originalX + dx, originalY + dy).
@@ -792,7 +792,7 @@ const actions = {
   },
   exportJson(): string {
     const payload = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       canvas: {
         width: state.canvasWidth,
