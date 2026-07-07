@@ -83,6 +83,26 @@ describe('moveMany — does not double-shift a dragged frame\'s descendants', ()
   })
 })
 
+describe('reflowFrame — local coordinates', () => {
+  it('places children relative to the frame itself, honoring padding', () => {
+    const frame = CmsFactories.frame(500, 500)
+    frame.layoutDirection = 'vertical'
+    frame.layoutGap = 8
+    frame.styles.padding = 10
+    cms.addElement(frame)
+    const child = CmsFactories.text(0, 0)
+    child.parentId = frame.id
+    child.height = 40
+    cms.addElement(child)
+
+    cms.reflowFrame(frame.id)
+
+    const placed = cms.state.elements.find((e) => e.id === child.id)!
+    expect(placed.x).toBe(10)
+    expect(placed.y).toBe(10)
+  })
+})
+
 describe('exportJson', () => {
   it('bumps the schema version to 2', () => {
     const payload = JSON.parse(cms.exportJson())

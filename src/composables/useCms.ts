@@ -170,7 +170,7 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
     .filter((e) => e.parentId === frameId)
     .sort((a, b) => order.get(a.id)! - order.get(b.id)!)
 
-  let cursor = dir === 'vertical' ? frame.y + pad.t : frame.x + pad.l
+  let cursor = dir === 'vertical' ? pad.t : pad.l
   const nextElements = [...state.elements]
 
   for (const child of children) {
@@ -183,27 +183,27 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
     if (dir === 'vertical') {
       y = cursor
       if (align === 'stretch') {
-        x = frame.x + pad.l
+        x = pad.l
         w = Math.max(1, frame.width - pad.l - pad.r)
       } else if (align === 'center') {
-        x = frame.x + (frame.width - w) / 2
+        x = (frame.width - w) / 2
       } else if (align === 'end') {
-        x = frame.x + frame.width - pad.r - w
+        x = frame.width - pad.r - w
       } else {
-        x = frame.x + pad.l
+        x = pad.l
       }
       cursor = y + estimatedChildHeight(child) + gap
     } else {
       x = cursor
       if (align === 'stretch') {
-        y = frame.y + pad.t
+        y = pad.t
         h = Math.max(1, frame.height - pad.t - pad.b)
       } else if (align === 'center') {
-        y = frame.y + (frame.height - h) / 2
+        y = (frame.height - h) / 2
       } else if (align === 'end') {
-        y = frame.y + frame.height - pad.b - h
+        y = frame.height - pad.b - h
       } else {
-        y = frame.y + pad.t
+        y = pad.t
       }
       cursor = x + w + gap
     }
@@ -216,7 +216,7 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
     const contentEnd = cursor - gap
     let newW: number, newH: number
     if (dir === 'vertical') {
-      newH = Math.max(1, contentEnd - frame.y + pad.b)
+      newH = Math.max(1, contentEnd + pad.b)
       // Cross axis: fit the widest child
       const rightMost = Math.max(
         ...children.map((c) => {
@@ -224,16 +224,16 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
           return cur.x + cur.width
         }),
       )
-      newW = Math.max(1, rightMost - frame.x + pad.r)
+      newW = Math.max(1, rightMost + pad.r)
     } else {
-      newW = Math.max(1, contentEnd - frame.x + pad.r)
+      newW = Math.max(1, contentEnd + pad.r)
       const bottomMost = Math.max(
         ...children.map((c) => {
           const cur = nextElements.find((n) => n.id === c.id)!
           return cur.y + cur.height
         }),
       )
-      newH = Math.max(1, bottomMost - frame.y + pad.b)
+      newH = Math.max(1, bottomMost + pad.b)
     }
     const fIdx = nextElements.findIndex((e) => e.id === frameId)
     if (fIdx >= 0 && (nextElements[fIdx].width !== newW || nextElements[fIdx].height !== newH)) {
