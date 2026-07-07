@@ -1,10 +1,7 @@
 import hljs from 'highlight.js/lib/common'
 import type { CmsElement, ElementStyles } from '../types'
 
-export interface CmsRenderElement extends CmsElement {
-  rawX?: number
-  rawY?: number
-}
+export type CmsRenderElement = CmsElement
 
 export interface RenderPayload {
   canvas: { width: number; height: number; flexibleHeight?: boolean }
@@ -40,33 +37,6 @@ function estimatedHeight(el: CmsRenderElement): number {
   const lines = Math.max(1, (el.content || '').split('\n').length)
   return Math.ceil((s.fontSize ?? 16) * (s.lineHeight ?? 1.5) * lines + (s.padding ?? 0) * 2)
 }
-
-// function computeClipInset(el: CmsRenderElement): string {
-//   // Intersect the bounds of every ancestor frame with clipContent enabled
-//   let minX = -Infinity,
-//     minY = -Infinity,
-//     maxX = Infinity,
-//     maxY = Infinity
-//   let has = false
-//   let cur: CmsRenderElement | undefined = _elementsById.get(el.parentId ?? '')
-//   while (cur) {
-//     if (cur.type === 'frame' && cur.clipContent) {
-//       has = true
-//       if (cur.x > minX) minX = cur.x
-//       if (cur.y > minY) minY = cur.y
-//       if (cur.x + cur.width < maxX) maxX = cur.x + cur.width
-//       if (cur.y + estimatedHeight(cur) < maxY) maxY = cur.y + estimatedHeight(cur)
-//     }
-//     cur = _elementsById.get(cur.parentId ?? '')
-//   }
-//   if (!has) return ''
-//   const h = estimatedHeight(el)
-//   const top = Math.max(0, minY - el.y)
-//   const left = Math.max(0, minX - el.x)
-//   const right = Math.max(0, el.x + el.width - maxX)
-//   const bottom = Math.max(0, el.y + h - maxY)
-//   return `clip-path:inset(${top}px ${right}px ${bottom}px ${left}px)`
-// }
 
 // Debug attrs shown on every rendered outer div — inspect in devtools
 function dbg(el: CmsRenderElement): string {
@@ -401,32 +371,10 @@ export function renderHtml(payload: RenderPayload): string {
   }
 
   const childrenOf = (pid: string | null): CmsRenderElement[] =>
-    els
-      .reduce<CmsRenderElement[]>((acc, e) => {
-        if ((e.parentId ?? null) !== pid || !isVisible(e)) {
-          return acc
-        }
-
-        acc.push({
-          ...e,
-          rawX: e.x,
-          rawY: e.y,
-        })
-
-        return acc
-      }, [])
-      .sort((a, b) => a.y - b.y || a.x - b.x)
+    els.filter((e) => (e.parentId ?? null) === pid && isVisible(e)).sort((a, b) => a.y - b.y || a.x - b.x)
 
   const renderNode = (el: CmsRenderElement) => {
-    const childrenHtml: string = childrenOf(el.id)
-      .map((childElement) => ({
-        ...childElement,
-        x: childElement.x - (el.rawX ?? el.x),
-        y: childElement.y - (el.rawY ?? el.y),
-      }))
-      .map(renderNode)
-      .join('')
-
+    const childrenHtml: string = childrenOf(el.id).map(renderNode).join('')
     return RENDERERS[el.type]?.(el, childrenHtml) ?? ''
   }
 
@@ -809,24 +757,21 @@ export function renderFlowHtml(payload: RenderPayload): string {
         const sorted = [...children].sort((a, b) => a.y - b.y)
         let prevBottom = -1
         for (const child of sorted) {
-          const relY = child.y - el.y - pt // 0-based within padding zone
-          const relX = child.x - el.x - pl
-          const relEl = { ...child, x: relX, y: relY }
-          const gap = prevBottom < 0 ? 0 : Math.max(0, relY - prevBottom)
+          const gap = prevBottom < 0 ? 0 : Math.max(0, child.y - prevBottom)
           // We're inside flex column, so alignment via margin-left auto:
-          const rightGap = innerW - relX - child.width
+          const rightGap = innerW - child.x - child.width
           const alignCss = (() => {
             const tol = Math.max(2, innerW * 0.005)
-            if (Math.abs(relX - rightGap) <= tol) return 'align-self:center'
-            if (rightGap < relX)
+            if (Math.abs(child.x - rightGap) <= tol) return 'align-self:center'
+            if (rightGap < child.x)
               return `align-self:flex-end;margin-right:${Math.max(0, rightGap)}px`
-            return `align-self:flex-start;margin-left:${Math.max(0, relX)}px`
+            return `align-self:flex-start;margin-left:${Math.max(0, child.x)}px`
           })()
-          const inner = renderNode(relEl as CmsRenderElement, 0, innerW)
+          const inner = renderNode(child, 0, innerW)
           parts.push(
             `<div style="${gap ? `margin-top:${gap}px;` : ''}${alignCss};max-width:100%">${inner}</div>`,
           )
-          prevBottom = relY + flowHeightOf(child)
+          prevBottom = child.y + flowHeightOf(child)
         }
       } finally {
         _autoFlex--
