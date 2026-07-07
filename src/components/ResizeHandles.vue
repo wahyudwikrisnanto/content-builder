@@ -72,16 +72,24 @@ function start(e: MouseEvent, hid: HandleId): void {
       return
     }
     const siblings = cms.state.elements.filter(
-      (e) => e.id !== props.element.id && cms.isEffectivelyVisible(e.id),
+      (e) =>
+        e.id !== props.element.id &&
+        e.parentId === props.element.parentId &&
+        cms.isEffectivelyVisible(e.id),
     )
     const threshold = 6 / z
     // Snap to parent frame's inner padding zone if this element is a child
+    const parentFrame = props.element.parentId
+      ? cms.state.elements.find((e) => e.id === props.element.parentId)
+      : undefined
+    const containerWidth = parentFrame ? parentFrame.width : cms.state.canvasWidth
+    const containerHeight = parentFrame ? parentFrame.height : cms.effectiveHeight.value
     const parentBox = cms.parentInnerBox(props.element)
     const snap = computeSnap(
       { x, y, width: w, height: h },
       siblings,
-      cms.state.canvasWidth,
-      cms.effectiveHeight.value,
+      containerWidth,
+      containerHeight,
       threshold,
       parentBox ?? undefined,
     )
