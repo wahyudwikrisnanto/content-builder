@@ -336,18 +336,20 @@ function nodeToElements(
     const name = node.getAttribute('aria-label') || 'Frame'
     const frameId = cmsUid()
     const startY = ctx.bottom
-    // Render children first into a sub-context to compute frame size
+    // Render children first into a sub-context to compute frame size.
+    // Frame-local: children's coordinates are relative to this frame's own
+    // box, not the page — see the parent-relative coordinates migration.
     const innerCtx = {
-      x: ctx.x + 12,
-      y: startY + 12,
+      x: 12,
+      y: 12,
       maxWidth: ctx.maxWidth - 24,
-      bottom: startY + 12,
+      bottom: 12,
     }
     const childEls: CmsElement[] = []
     for (const child of Array.from(node.children)) {
       childEls.push(...nodeToElements(child, frameId, innerCtx))
     }
-    const frameHeight = Math.max(60, innerCtx.bottom - startY + 12)
+    const frameHeight = Math.max(60, innerCtx.bottom + 12)
     out.push({
       id: frameId,
       type: 'frame',
