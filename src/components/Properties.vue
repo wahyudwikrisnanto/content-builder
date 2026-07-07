@@ -434,7 +434,7 @@ const headerLabel = computed(() => {
           <button
             :class="['toggle-btn', { active: sel.styles.fontStyle === 'italic' }]"
             @click="
-              sty(sel.id, 'fontStyle', sel.styles.fontStyle === 'italic' ? 'normal' : 'italic')
+              sty(sel!.id, 'fontStyle', sel!.styles.fontStyle === 'italic' ? 'normal' : 'italic')
             "
           >
             <Icon name="italic" :size="14" />
@@ -443,9 +443,9 @@ const headerLabel = computed(() => {
             :class="['toggle-btn', { active: sel.styles.textDecoration === 'underline' }]"
             @click="
               sty(
-                sel.id,
+                sel!.id,
                 'textDecoration',
-                sel.styles.textDecoration === 'underline' ? 'none' : 'underline',
+                sel!.styles.textDecoration === 'underline' ? 'none' : 'underline',
               )
             "
           >
@@ -774,7 +774,7 @@ const headerLabel = computed(() => {
             type="checkbox"
             :checked="!!sel.clipContent"
             @change="
-              cms.updateElement(sel.id, {
+              cms.updateElement(sel!.id, {
                 clipContent: ($event.target as HTMLInputElement).checked,
               })
             "
@@ -1015,7 +1015,7 @@ const headerLabel = computed(() => {
               type="checkbox"
               :checked="!!sel.layoutGrow"
               @change="
-                cms.updateElement(sel.id, {
+                cms.updateElement(sel!.id, {
                   layoutGrow: ($event.target as HTMLInputElement).checked,
                 })
               "

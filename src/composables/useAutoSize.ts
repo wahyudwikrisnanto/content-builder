@@ -30,8 +30,10 @@ export function useAutoSize(
     }
   }
 
-  function schedule(): void {
-    nextTick(measure)
+  function schedule() {
+    // nextTick(() => {
+    //   requestAnimationFrame(measure)
+    // })
   }
 
   function rebind(): void {
