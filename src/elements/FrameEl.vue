@@ -82,7 +82,7 @@ const gapRects = computed<CSSProperties[]>(() => {
   for (let i = 0; i < kids.length - 1; i++) {
     const a = kids[i]
     if (dir === 'vertical') {
-      const top = a.y + a.height - props.element.y
+      const top = a.y + a.height
       rects.push({
         top: top + 'px',
         left: p.l + 'px',
@@ -90,7 +90,7 @@ const gapRects = computed<CSSProperties[]>(() => {
         height: gap + 'px',
       })
     } else {
-      const left = a.x + a.width - props.element.x
+      const left = a.x + a.width
       rects.push({
         top: p.t + 'px',
         left: left + 'px',
@@ -143,6 +143,8 @@ const gapRects = computed<CSSProperties[]>(() => {
       <!-- Gap guides between children -->
       <div v-for="(r, i) in gapRects" :key="'g' + i" class="gap-guide" :style="r" />
     </template>
+
+    <slot />
   </div>
 </template>
 
