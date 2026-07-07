@@ -564,15 +564,17 @@ const actions = {
     const el = state.elements[i]
     // descendants includes id itself so a frame can't be nested in its own subtree
     const descendants = new Set([id, ...collectDescendantIds(id, state.elements)])
-    const cx = el.x + el.width / 2
-    const cy = el.y + el.height / 2
+    const absEl = absolutePosition(el)
+    const cx = absEl.x + el.width / 2
+    const cy = absEl.y + el.height / 2
     let target: string | null = null
     // For nested frames: pick the smallest containing frame (deepest fit)
     let bestArea = Infinity
     for (const f of state.elements) {
       if (f.type !== 'frame') continue
       if (descendants.has(f.id)) continue
-      if (cx < f.x || cx > f.x + f.width || cy < f.y || cy > f.y + f.height) continue
+      const absF = absolutePosition(f)
+      if (cx < absF.x || cx > absF.x + f.width || cy < absF.y || cy > absF.y + f.height) continue
       const area = f.width * f.height
       if (area < bestArea) {
         bestArea = area
@@ -581,7 +583,14 @@ const actions = {
     }
     const prevParent = el.parentId
     if (el.parentId !== target) {
-      const updated = { ...el, parentId: target }
+      const targetFrame = target ? state.elements.find((e) => e.id === target) : undefined
+      const newOrigin = targetFrame ? absolutePosition(targetFrame) : { x: 0, y: 0 }
+      const updated = {
+        ...el,
+        parentId: target,
+        x: absEl.x - newOrigin.x,
+        y: absEl.y - newOrigin.y,
+      }
       state.elements = [...state.elements.filter((e) => e.id !== id), updated]
       // Only reflow here when the parent actually changed (close the old parent's gap, slot
       // into the new one). Reflowing unconditionally — even for a same-frame drag — snaps the

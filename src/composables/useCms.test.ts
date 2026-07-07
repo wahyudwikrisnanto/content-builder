@@ -103,6 +103,22 @@ describe('reflowFrame — local coordinates', () => {
   })
 })
 
+describe('autoReparent — rebases coordinates when entering a frame', () => {
+  it('converts a root element\'s absolute position to frame-local on reparent', () => {
+    const frame = CmsFactories.frame(100, 100) // absolute box: x 100..500, y 100..400
+    cms.addElement(frame)
+    const el = CmsFactories.text(150, 150) // root, so x/y are already canvas-absolute
+    cms.addElement(el)
+
+    cms.autoReparent(el.id)
+
+    const updated = cms.state.elements.find((e) => e.id === el.id)!
+    expect(updated.parentId).toBe(frame.id)
+    expect(updated.x).toBe(50) // 150 - 100
+    expect(updated.y).toBe(50)
+  })
+})
+
 describe('exportJson', () => {
   it('bumps the schema version to 2', () => {
     const payload = JSON.parse(cms.exportJson())
