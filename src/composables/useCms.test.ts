@@ -137,6 +137,34 @@ describe('moveMany — excludes a selected descendant of another selected elemen
     expect(movedChild.x).toBe(20) // carried along by the frame, not shifted again
     expect(movedChild.y).toBe(20)
   })
+
+  it('excludes a grandchild when grandparent is selected, even with unselected parent in between', () => {
+    // Create a 3-level nesting: outerFrame → innerFrame (unselected) → grandchild
+    const outerFrame = CmsFactories.frame(100, 100)
+    cms.addElement(outerFrame)
+
+    const innerFrame = CmsFactories.frame(20, 20)
+    innerFrame.parentId = outerFrame.id
+    cms.addElement(innerFrame)
+
+    const grandchild = CmsFactories.text(5, 5)
+    grandchild.parentId = innerFrame.id
+    cms.addElement(grandchild)
+
+    // Seed originals from all elements (real drag flow does this)
+    const originals = new Map(cms.state.elements.map((el) => [el.id, { x: el.x, y: el.y }]))
+
+    // Move with outerFrame and grandchild selected (innerFrame is NOT selected)
+    cms.moveMany([outerFrame.id, grandchild.id], originals, 50, 50)
+
+    const movedOuter = cms.state.elements.find((e) => e.id === outerFrame.id)!
+    const movedGrandchild = cms.state.elements.find((e) => e.id === grandchild.id)!
+
+    expect(movedOuter.x).toBe(150) // 100 + 50
+    expect(movedOuter.y).toBe(150) // 100 + 50
+    expect(movedGrandchild.x).toBe(5) // stayed at original position: carried by outerFrame through innerFrame
+    expect(movedGrandchild.y).toBe(5)
+  })
 })
 
 describe('exportJson', () => {
