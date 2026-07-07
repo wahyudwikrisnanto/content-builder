@@ -71,7 +71,6 @@ function dbg(el: CmsElement): string {
 function commonBoxStyle(el: CmsElement): string {
   const s = el.styles
   const opacity = s.opacity != null ? s.opacity : 1
-  const clip = computeClipInset(el)
   return [
     `position:absolute`,
     `left:${el.x}px`,
@@ -79,7 +78,6 @@ function commonBoxStyle(el: CmsElement): string {
     `width:${el.width}px`,
     `height:${estimatedHeight(el)}px`,
     `opacity:${opacity}`,
-    clip,
   ]
     .filter(Boolean)
     .join(';')
@@ -196,12 +194,24 @@ function renderContainer(el: CmsElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;${boxCss(s)}"></div></div>`
 }
 
-function renderFrame(el: CmsElement): string {
+function renderFrame(el: CmsElement, childRender?: string): string {
   const s = el.styles
   const clip = el.clipContent ? 'overflow:hidden;' : ''
   const bw = s.borderWidth ?? 0
   const border = bw > 0 ? `border:${bw}px solid ${s.borderColor || '#D4D4D4'};` : ''
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${s.borderRadius || 0}px;${border}"></div></div>`
+
+  return `
+    <div ${dbg(el)} 
+      style="
+        ${commonBoxStyle(el)};
+        ${clip};
+        background-color:${s.backgroundColor || 'transparent'};
+        border-radius:${s.borderRadius || 0}px;
+        ${border}
+      ">
+        ${childRender ?? ''}
+    </div>
+  `
 }
 
 function renderButton(el: CmsElement): string {
@@ -344,7 +354,7 @@ function renderInput(el: CmsElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
 }
 
-const RENDERERS: Record<string, (el: CmsElement) => string> = {
+const RENDERERS: Record<string, (el: CmsElement, childRender?: string) => string> = {
   text: renderText,
   image: renderImage,
   shape: renderShape,
@@ -365,26 +375,47 @@ export function renderHtml(payload: RenderPayload): string {
   const w = payload.canvas.width
   const h = payload.canvas.height
   const flexH = payload.canvas.flexibleHeight
+  const els = payload.elements
+  const byId = new Map(els.map((e) => [e.id, e]))
+
   const minHeight = flexH
     ? Math.max(h, ...payload.elements.map((e) => (e.visible ? e.y + e.height : 0)))
     : h
-
+ 
   _elementsById = new Map(payload.elements.map((e) => [e.id, e]))
 
-  const visibility = (el: CmsElement): boolean => {
+  const isVisible = (el: CmsElement): boolean => {
     let cur: CmsElement | undefined = el
     while (cur) {
       if (!cur.visible) return false
       if (!cur.parentId) return true
-      cur = _elementsById.get(cur.parentId)
+      cur = byId.get(cur.parentId)
     }
     return true
   }
 
-  const body = payload.elements
-    .filter(visibility)
-    .map((el) => RENDERERS[el.type]?.(el) ?? '')
-    .join('\n')
+  const childrenOf = (pid: string | null): CmsElement[] =>
+    els
+      .filter((e) => (e.parentId ?? null) === pid && isVisible(e))
+      .sort((a, b) => a.y - b.y || a.x - b.x)
+
+  const renderNode = (el: CmsElement) => {
+    const childrenHtml: string = childrenOf(el.id)
+        .map(childElement => ({
+          ...childElement,
+          x: childElement.x - el.x,
+          y: childElement.y - el.y,
+        }))
+        .map(renderNode).join('')
+
+    return RENDERERS[el.type]?.(el, childrenHtml) ?? ''
+  }
+
+  let body = ''
+  const roots = childrenOf(null)
+  for (const element of roots) {
+    body += renderNode(element)
+  }
 
   return `<div class="content-render" style="position:relative;width:${w}px;height:${minHeight}px;background:white;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${body}</div>`
 }
