@@ -450,7 +450,6 @@ const actions = {
   /**
    * Set positions of many elements from absolute (originalX + dx, originalY + dy).
    * `originals` maps id → starting position captured at drag start.
-   * Descendants of frames in the id list are moved automatically.
    * Delta is clamped so the group's bounding box stays on-canvas.
    */
   moveMany(
@@ -460,11 +459,7 @@ const actions = {
     dy: number,
   ): void {
     if (!ids.length) return
-    const ownership = new Set<string>()
-    for (const id of ids) {
-      ownership.add(id)
-      for (const d of collectDescendantIds(id, state.elements)) ownership.add(d)
-    }
+    const ownership = new Set<string>(ids)
     // Compute the group's original bounding box from originals + current sizes
     let minX = Infinity,
       minY = Infinity,

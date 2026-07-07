@@ -60,6 +60,29 @@ describe('absolutePosition', () => {
   })
 })
 
+describe('moveMany — does not double-shift a dragged frame\'s descendants', () => {
+  it('leaves a frame child untouched when the frame is moved via moveMany', () => {
+    const frame = CmsFactories.frame(100, 100)
+    cms.addElement(frame)
+    const child = CmsFactories.text(20, 20)
+    child.parentId = frame.id
+    cms.addElement(child)
+
+    // Real drag flow (CanvasElement.vue's beginDragFor) captures originals for every
+    // element, not just the dragged one — seed it the same way, or the buggy code's
+    // `if (!orig) continue`/`return el` guards mask the bug this test exists to catch.
+    const originals = new Map(cms.state.elements.map((el) => [el.id, { x: el.x, y: el.y }]))
+    cms.moveMany([frame.id], originals, 50, 50)
+
+    const movedFrame = cms.state.elements.find((e) => e.id === frame.id)!
+    const movedChild = cms.state.elements.find((e) => e.id === child.id)!
+    expect(movedFrame.x).toBe(150)
+    expect(movedFrame.y).toBe(150)
+    expect(movedChild.x).toBe(20)
+    expect(movedChild.y).toBe(20)
+  })
+})
+
 describe('exportJson', () => {
   it('bumps the schema version to 2', () => {
     const payload = JSON.parse(cms.exportJson())
