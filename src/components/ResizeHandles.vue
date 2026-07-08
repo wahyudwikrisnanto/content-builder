@@ -79,11 +79,7 @@ function start(e: MouseEvent, hid: HandleId): void {
     )
     const threshold = 6 / z
     // Snap to parent frame's inner padding zone if this element is a child
-    const parentFrame = props.element.parentId
-      ? cms.state.elements.find((e) => e.id === props.element.parentId)
-      : undefined
-    const containerWidth = parentFrame ? parentFrame.width : cms.state.canvasWidth
-    const containerHeight = parentFrame ? parentFrame.height : cms.effectiveHeight.value
+    const { containerWidth, containerHeight, origin } = cms.snapContainerFor(props.element)
     const parentBox = cms.parentInnerBox(props.element)
     const snap = computeSnap(
       { x, y, width: w, height: h },
@@ -111,7 +107,6 @@ function start(e: MouseEvent, hid: HandleId): void {
     w = Math.max(20, w)
     h = Math.max(8, h)
 
-    const origin = parentFrame ? cms.absolutePosition(parentFrame) : { x: 0, y: 0 }
     cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
     cms.resize(props.element.id, x, y, w, h)
   }

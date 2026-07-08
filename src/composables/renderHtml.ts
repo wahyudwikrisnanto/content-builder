@@ -20,9 +20,6 @@ function px(v: number | undefined, fallback = 0): string {
   return (v ?? fallback) + 'px'
 }
 
-// Set by renderHtml before iterating so per-element renderers can look up parents
-let _elementsById: Map<string, CmsRenderElement> = new Map()
-
 // Text elements report height:0 until useAutoSize's ResizeObserver measures the mounted
 // DOM node (see useAutoSize.ts) — legit for elements never mounted (e.g. hand-authored or
 // freshly-created JSON). Treating that 0 literally makes an absolutely-positioned box with
@@ -347,18 +344,18 @@ const RENDERERS: Record<string, (el: CmsRenderElement, childRender?: string) => 
  * Returns inner canvas HTML (no <html>/<head>).
  */
 export function renderHtml(payload: RenderPayload): string {
-  // console.trace('suka')
   const w = payload.canvas.width
   const h = payload.canvas.height
   const flexH = payload.canvas.flexibleHeight
-  const els = JSON.parse(JSON.stringify(payload.elements)) as CmsRenderElement[]
+  const els = payload.elements
   const byId = new Map(els.map((e) => [e.id, e]))
 
   const minHeight = flexH
-    ? Math.max(h, ...payload.elements.map((e) => (e.visible ? e.y + e.height : 0)))
+    ? Math.max(
+        h,
+        ...payload.elements.map((e) => (e.visible && !e.parentId ? e.y + e.height : 0)),
+      )
     : h
-
-  _elementsById = new Map(payload.elements.map((e) => [e.id, e]))
 
   const isVisible = (el: CmsRenderElement): boolean => {
     let cur: CmsRenderElement | undefined = el
@@ -698,7 +695,6 @@ export function renderFlowHtml(payload: RenderPayload): string {
         ? `border:${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}`
         : ''
       const padding = pt || pr || pb || pl ? `padding:${pt}px ${pr}px ${pb}px ${pl}px` : ''
-      console.log(el, el.layoutGrow)
       const heightStyle = (() => {
         if (el.layoutGrow) return 'height:auto'
         if (clip) return `height:${el.height}px;overflow:hidden`

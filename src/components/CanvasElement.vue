@@ -105,11 +105,7 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     const siblings = cms.state.elements.filter(
       (e) => e.id !== target.id && e.parentId === target.parentId && cms.isEffectivelyVisible(e.id),
     )
-    const parentFrame = target.parentId
-      ? cms.state.elements.find((e) => e.id === target.parentId)
-      : undefined
-    const containerWidth = parentFrame ? parentFrame.width : cms.state.canvasWidth
-    const containerHeight = parentFrame ? parentFrame.height : cms.effectiveHeight.value
+    const { containerWidth, containerHeight, origin } = cms.snapContainerFor(target)
     const parentBox = cms.parentInnerBox(target)
     const snap = computeSnap(
       { x: rawX, y: rawY, width: target.width, height: target.height },
@@ -119,7 +115,6 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       6 / z,
       parentBox ?? undefined,
     )
-    const origin = parentFrame ? cms.absolutePosition(parentFrame) : { x: 0, y: 0 }
     cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
     cms.move(target.id, snap.x, snap.y)
   }

@@ -11,7 +11,6 @@ const props = defineProps<{
 const html = computed(() => {
   if (!props.json) return ''
   try {
-    // console.trace(props.json)
     const data = JSON.parse(props.json)
     if (!data?.elements || !data?.canvas) return ''
     return props.responsive

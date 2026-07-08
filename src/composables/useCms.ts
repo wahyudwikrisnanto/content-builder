@@ -310,6 +310,23 @@ const actions = {
     if (!parent || parent.type !== 'frame') return null
     return framePaddingBox(parent)
   },
+  /** Coordinate-space container for drag/resize snapping: parent frame (if any), its dimensions, and its canvas-absolute origin. */
+  snapContainerFor(el: CmsElement): {
+    parentFrame: CmsElement | undefined
+    containerWidth: number
+    containerHeight: number
+    origin: { x: number; y: number }
+  } {
+    const parentFrame = el.parentId
+      ? state.elements.find((e) => e.id === el.parentId)
+      : undefined
+    return {
+      parentFrame,
+      containerWidth: parentFrame ? parentFrame.width : state.canvasWidth,
+      containerHeight: parentFrame ? parentFrame.height : effectiveHeight.value,
+      origin: parentFrame ? absolutePosition(parentFrame) : { x: 0, y: 0 },
+    }
+  },
   addElement(element: CmsElement): void {
     snapshot()
     const sized = clampSize(element, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
