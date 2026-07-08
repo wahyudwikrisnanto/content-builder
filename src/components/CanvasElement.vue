@@ -242,6 +242,7 @@ async function onDblClick(): Promise<void> {
 
 <template>
   <div
+    :data-element-id="element.id"
     :class="[
       'canvas-el',
       {

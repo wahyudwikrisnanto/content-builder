@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
@@ -9,6 +10,52 @@ import type { CmsElement } from '../types'
 const props = defineProps<{ element: CmsElement }>()
 const cms = useCms()
 
+// 1. Reactive trigger to force dynamic position updates on external browser events
+const viewportTick = ref(0)
+const triggerUpdate = () => {
+  viewportTick.value++
+}
+
+onMounted(() => {
+  // Catch scrolling on any scrollable container (useCapture: true catches all child scrolls)
+  window.addEventListener('scroll', triggerUpdate, true)
+  window.addEventListener('resize', triggerUpdate)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', triggerUpdate, true)
+  window.removeEventListener('resize', triggerUpdate)
+})
+
+// 2. Computed wrapper style tracking both element state, zoom, and viewport changes
+const wrapperStyle = computed(() => {
+  // Reading these reactive properties ensures recalculation when zoom/element properties change:
+  const _zoom = cms.state.zoom
+  const _x = props.element.x
+  const _y = props.element.y
+  const _w = props.element.width
+  const _h = props.element.height
+  const _tick = viewportTick.value
+
+  const realElement = document.querySelector(`[data-element-id="${props.element.id}"]`)
+  if (!realElement) {
+    return { display: 'none' }
+  }
+
+  const rect = realElement.getBoundingClientRect()
+
+  return {
+    position: 'absolute' as const,
+    left: `${rect.left + window.scrollX}px`,
+    top: `${rect.top + window.scrollY}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    pointerEvents: 'none' as const,
+    zIndex: 9999,
+  }
+})
+
+// --- Keep existing resize drag logic intact ---
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 interface Handle {
   id: HandleId
@@ -29,9 +76,11 @@ const HANDLES: Handle[] = [
 function start(e: MouseEvent, hid: HandleId): void {
   e.stopPropagation()
   e.preventDefault()
+
   const z = cms.state.zoom
-  const startX = e.clientX,
-    startY = e.clientY
+  const startX = e.clientX
+  const startY = e.clientY
+
   const orig = {
     x: props.element.x,
     y: props.element.y,
@@ -40,8 +89,7 @@ function start(e: MouseEvent, hid: HandleId): void {
   }
   const prev = cloneEl(cms.state.elements)
   const touchesVertical = hid.includes('n') || hid.includes('s')
-  // Set manualHeight IMMEDIATELY via direct state mutation so useAutoSize honors it during drag.
-  // (Going through updateElement would fire a parent-reflow that snaps back.)
+
   if (touchesVertical) {
     cms.setManualHeight(props.element.id, true)
   }
@@ -50,6 +98,7 @@ function start(e: MouseEvent, hid: HandleId): void {
     const dx = (ev.clientX - startX) / z
     const dy = (ev.clientY - startY) / z
     let { x, y, w, h } = orig
+
     if (!props.element.responsive) {
       if (hid.includes('e')) w = Math.max(20, orig.w + dx)
       if (hid.includes('w')) {
@@ -71,6 +120,7 @@ function start(e: MouseEvent, hid: HandleId): void {
       cms.resize(props.element.id, x, y, w, h)
       return
     }
+
     const siblings = cms.state.elements.filter(
       (e) =>
         e.id !== props.element.id &&
@@ -78,9 +128,9 @@ function start(e: MouseEvent, hid: HandleId): void {
         cms.isEffectivelyVisible(e.id),
     )
     const threshold = 6 / z
-    // Snap to parent frame's inner padding zone if this element is a child
     const { containerWidth, containerHeight, origin } = cms.snapContainerFor(props.element)
     const parentBox = cms.parentInnerBox(props.element)
+
     const snap = computeSnap(
       { x, y, width: w, height: h },
       siblings,
@@ -89,7 +139,7 @@ function start(e: MouseEvent, hid: HandleId): void {
       threshold,
       parentBox ?? undefined,
     )
-    // Only apply snap on the edge being dragged, preserve opposite edge
+
     const sdx = snap.x - x
     const sdy = snap.y - y
     if (hid.includes('e')) {
@@ -110,13 +160,12 @@ function start(e: MouseEvent, hid: HandleId): void {
     cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
     cms.resize(props.element.id, x, y, w, h)
   }
+
   const onUp = (): void => {
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
     cms.clearGuides()
-    // If child of an auto-layout frame, reflow so siblings shift after resize.
-    // Own axis-locked dims (main-axis cursor position, cross-axis stretch)
-    // will be re-applied — that's expected: the user picked stretch/etc.
+
     const cur = cms.state.elements.find((e) => e.id === props.element.id)
     if (cur?.parentId) {
       const parent = cms.state.elements.find((e) => e.id === cur.parentId)
@@ -126,18 +175,23 @@ function start(e: MouseEvent, hid: HandleId): void {
     }
     cms.pushSnapshot(prev)
   }
+
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
 }
 </script>
 
 <template>
-  <div
-    v-for="h in HANDLES"
-    :key="h.id"
-    v-show="!element.responsive || h.id === 'n' || h.id === 's'"
-    class="resize-handle"
-    :style="{ position: 'absolute', ...h.css }"
-    @mousedown="start($event, h.id)"
-  ></div>
+  <Teleport to="body">
+    <div :style="wrapperStyle" class="cb-root-var cb-resize-handles-wrapper">
+      <div
+        v-for="h in HANDLES"
+        :key="h.id"
+        v-show="!element.responsive || h.id === 'n' || h.id === 's'"
+        class="cb-resize-handle"
+        :style="{ position: 'absolute', pointerEvents: 'auto', ...h.css }"
+        @mousedown="start($event, h.id)"
+      ></div>
+    </div>
+  </Teleport>
 </template>

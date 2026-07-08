@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import 'highlight.js/styles/atom-one-dark.css'
 import { renderHtml, renderFlowHtml } from './composables/renderHtml'
 

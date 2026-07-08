@@ -1,4 +1,4 @@
-.cb-root {
+.cb-root-var {
   --cb-bg: #f5f5f4;
   --cb-bg-panel: #ffffff;
   --cb-bg-hover: #f7f7f6;
@@ -671,14 +671,18 @@
   background: rgba(37, 99, 235, 0.12);
 }
 
-.cb-root .resize-handle {
+.cb-resize-handles-wrapper {
+  z-index: 9999;
+}
+
+.cb-resize-handle {
   position: absolute;
   width: 10px;
   height: 10px;
   background: #fff;
   border: 2px solid var(--cb-selection);
   border-radius: 2px;
-  z-index: 10;
+  z-index: 9999;
 }
 
 .cb-root .img-placeholder {

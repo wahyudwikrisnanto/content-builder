@@ -48,10 +48,12 @@ onMounted(() => {
   if (rounded < 1) cms.setZoom(Math.max(0.25, rounded))
   // passive:false required to call preventDefault on wheel
   el.addEventListener('wheel', onWheel, { passive: false })
+  document.addEventListener('click', onClickOutsideWorkspace)
 })
 
 onUnmounted(() => {
   scrollRef.value?.removeEventListener('wheel', onWheel)
+  document.removeEventListener('click', onClickOutsideWorkspace)
 })
 
 function onDrop(e: DragEvent): void {
@@ -117,6 +119,16 @@ function onScrollMouseDown(e: MouseEvent): void {
 
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
+}
+
+function onClickOutsideWorkspace(e: MouseEvent): void {
+  const target = e.target as Element;
+
+  if (target && !target.closest('.workspace')) {
+    cms.select(null);
+    cms.state.allSelected = false;
+    cms.state.selectedIds = [];
+  }
 }
 </script>
 
