@@ -2,7 +2,7 @@
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
-import { computeSnap } from '../composables/snapping'
+import { computeSnap, translateGuides } from '../composables/snapping'
 import { modKeys } from '../composables/useModifierKeys'
 import type { CmsElement } from '../types'
 
@@ -111,7 +111,8 @@ function start(e: MouseEvent, hid: HandleId): void {
     w = Math.max(20, w)
     h = Math.max(8, h)
 
-    cms.setGuides(snap.guides)
+    const origin = parentFrame ? cms.absolutePosition(parentFrame) : { x: 0, y: 0 }
+    cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
     cms.resize(props.element.id, x, y, w, h)
   }
   const onUp = (): void => {

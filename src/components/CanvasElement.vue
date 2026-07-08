@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
-import { computeSnap } from '../composables/snapping'
+import { computeSnap, translateGuides } from '../composables/snapping'
 import { modKeys } from '../composables/useModifierKeys'
 import { usePlugins, findRendererPlugin, findActivatorPlugin } from '../composables/usePlugins'
 import { openDialog } from '../composables/openDialog'
@@ -119,7 +119,8 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       6 / z,
       parentBox ?? undefined,
     )
-    cms.setGuides(snap.guides)
+    const origin = parentFrame ? cms.absolutePosition(parentFrame) : { x: 0, y: 0 }
+    cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
     cms.move(target.id, snap.x, snap.y)
   }
   const onUp = (): void => {
