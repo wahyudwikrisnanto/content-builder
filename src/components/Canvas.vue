@@ -124,7 +124,7 @@ function onScrollMouseDown(e: MouseEvent): void {
 function onClickOutsideWorkspace(e: MouseEvent): void {
   const target = e.target as Element;
 
-  if (target && !target.closest('.workspace')) {
+  if (target && !target.closest('.cb-root')) {
     cms.select(null);
     cms.state.allSelected = false;
     cms.state.selectedIds = [];

@@ -317,9 +317,7 @@ const actions = {
     containerHeight: number
     origin: { x: number; y: number }
   } {
-    const parentFrame = el.parentId
-      ? state.elements.find((e) => e.id === el.parentId)
-      : undefined
+    const parentFrame = el.parentId ? state.elements.find((e) => e.id === el.parentId) : undefined
     return {
       parentFrame,
       containerWidth: parentFrame ? parentFrame.width : state.canvasWidth,
@@ -407,6 +405,7 @@ const actions = {
     state.editingTextId = null
     state.allSelected = false
     state.selectedIds = []
+    console.trace(id)
   },
   setSelectedIds(ids: string[]): void {
     state.selectedIds = ids
@@ -687,17 +686,68 @@ const actions = {
     if (el.parentId) reflowFrame(el.parentId)
   },
   duplicate(id: string): void {
-    const el = state.elements.find((e) => e.id === id)
-    if (!el) return
+    const root = state.elements.find((e) => e.id === id)
+    if (!root) return
+
     snapshot()
-    const dup: CmsElement = { ...cloneEl(el), id: cmsUid(), x: el.x + 20, y: el.y + 20 }
-    const sized = clampSize(dup, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
-    Object.assign(dup, sized)
-    state.elements.push(dup)
-    // Auto-layout siblings are positioned by reflowFrame, not the raw +20/+20 offset above —
-    // without this the duplicate floats at that offset until an unrelated edit forces a reflow.
-    if (dup.parentId) reflowFrame(dup.parentId)
-    state.selectedId = dup.id
+
+    // Get root + all descendants
+    const originals: CmsElement[] = []
+
+    const collect = (parentId: string) => {
+      const children = state.elements.filter((e) => e.parentId === parentId)
+      for (const child of children) {
+        originals.push(child)
+        collect(child.id)
+      }
+    }
+
+    originals.push(root)
+    collect(root.id)
+
+    // old id -> new id
+    const idMap = new Map<string, string>()
+
+    for (const el of originals) {
+      idMap.set(el.id, cmsUid())
+    }
+
+    const clones = originals.map((el) => {
+      const clone = cloneEl(el)
+
+      clone.id = idMap.get(el.id)!
+
+      if (el.parentId && idMap.has(el.parentId)) {
+        // Parent is also duplicated
+        clone.parentId = idMap.get(el.parentId)!
+      } else {
+        // Keep original parent
+        clone.parentId = el.parentId
+      }
+
+      // Offset only the duplicated root
+      if (el.id === root.id) {
+        clone.x += 20
+        clone.y += 20
+
+        Object.assign(
+          clone,
+          clampSize(clone, state.canvasWidth, state.canvasHeight, state.flexibleHeight),
+        )
+      }
+
+      return clone
+    })
+
+    state.elements.push(...clones)
+
+    const duplicatedRoot = clones[0]
+
+    if (duplicatedRoot.parentId) {
+      reflowFrame(duplicatedRoot.parentId)
+    }
+
+    state.selectedId = duplicatedRoot.id
   },
   toggleVisible(id: string): void {
     const i = findIdx(id)

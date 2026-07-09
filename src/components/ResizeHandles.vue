@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
@@ -28,32 +28,45 @@ onUnmounted(() => {
 })
 
 // 2. Computed wrapper style tracking both element state, zoom, and viewport changes
-const wrapperStyle = computed(() => {
-  // Reading these reactive properties ensures recalculation when zoom/element properties change:
-  const _zoom = cms.state.zoom
-  const _x = props.element.x
-  const _y = props.element.y
-  const _w = props.element.width
-  const _h = props.element.height
-  const _tick = viewportTick.value
+const wrapperStyle = ref<Record<string, string | number>>({})
+watch(
+  () => [
+    cms.state.zoom,
+    props.element.x,
+    props.element.y,
+    props.element.width,
+    props.element.height,
+    viewportTick.value,
+  ],
+  async () => {
+    await nextTick()
 
-  const realElement = document.querySelector(`[data-element-id="${props.element.id}"]`)
-  if (!realElement) {
-    return { display: 'none' }
-  }
+    const realElement = document.querySelector(`[data-element-id="${props.element.id}"]`)
 
-  const rect = realElement.getBoundingClientRect()
+    if (!realElement) {
+      wrapperStyle.value = {
+        display: 'none',
+      }
+      return
+    }
 
-  return {
-    position: 'absolute' as const,
-    left: `${rect.left + window.scrollX}px`,
-    top: `${rect.top + window.scrollY}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    pointerEvents: 'none' as const,
-    zIndex: 9999,
-  }
-})
+    const rect = realElement.getBoundingClientRect()
+
+    wrapperStyle.value = {
+      position: 'absolute',
+      left: `${rect.left + window.scrollX}px`,
+      top: `${rect.top + window.scrollY}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      pointerEvents: 'none',
+      zIndex: 9999,
+    }
+  },
+  {
+    immediate: true,
+    flush: 'post',
+  },
+)
 
 // --- Keep existing resize drag logic intact ---
 type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
