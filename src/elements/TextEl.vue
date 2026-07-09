@@ -14,6 +14,7 @@ const editorRef = ref<HTMLElement | null>(null)
 const viewRef = ref<HTMLElement | null>(null)
 const measureRef = ref<HTMLElement | null>(null)
 
+
 useAutoSize(
   toRef(props, 'element'),
   () => measureRef.value,
@@ -30,6 +31,31 @@ useAutoSize(
     props.isEditing,
   ],
 )
+
+watch(
+  () => [
+    props.element.growHeight,
+    props.element.content,
+    props.element.styles.fontSize,
+    props.element.styles.lineHeight,
+    props.element.styles.padding,
+    props.element.styles.fontWeight,
+    props.element.styles.letterSpacing,
+    props.element.styles.listType,
+  ],
+  () => {
+    const el = props.element
+    if (!el.growHeight) return
+    nextTick(() => {
+      const node = measureRef.value
+      if (!node) return
+      const h = Math.min(Math.max(8, node.scrollHeight), cms.state.canvasHeight)
+      if (h !== el.height) cms.updateElement(el.id, { height: h }, { noHistory: true })
+    })
+  },
+  { immediate: true },
+)
+
 
 const listType = computed(() => props.element.styles.listType || 'none')
 const lines = computed(() => (props.element.content || '').split('\n'))
@@ -308,7 +334,7 @@ function onPaste(e: ClipboardEvent): void {
       {{ element.content }}
     </div>
 
-    <!-- Off-screen content clone for natural-height measurement -->
+<!-- Off-screen content clone for natural-height measurement -->
     <ul
       v-if="listType === 'bullet'"
       ref="measureRef"

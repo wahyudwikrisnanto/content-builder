@@ -463,8 +463,6 @@ const actions = {
   },
   setEditing(id: string | null): void {
     state.editingTextId = id
-    if (id) state.sidebarHidden = true
-    else state.sidebarHidden = false
   },
   toggleSidebar(): void {
     state.sidebarHidden = !state.sidebarHidden

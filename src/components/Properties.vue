@@ -366,13 +366,21 @@ const headerLabel = computed(() => {
       </div>
       <div class="prop-row">
         <span class="prop-label">Stretch</span>
-        <button
-          :class="['toggle-btn', { active: !!sel.responsive }]"
-          title="Stretch to full canvas width"
-          @click="cms.toggleResponsive(sel.id)"
-        >
-          <Icon name="responsive" :size="14" />
-        </button>
+        <div style="display:flex;gap:4px">
+          <button
+            :class="['toggle-btn', { active: !!sel.responsive }]"
+            title="Stretch to full canvas width"
+            @click="cms.toggleResponsive(sel.id)"
+          >
+            <Icon name="responsive" :size="14" />
+          </button>
+          <button
+            v-if="sel.type === 'text'"
+            :class="['toggle-btn', { active: !!sel.growHeight }]"
+            title="Grow height with content"
+            @click="cms.updateElement(sel.id, { growHeight: !sel.growHeight })"
+          ><Icon name="flex-height" :size="14" /></button>
+        </div>
       </div>
     </div>
 

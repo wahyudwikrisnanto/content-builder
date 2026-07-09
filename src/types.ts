@@ -92,6 +92,8 @@ export interface CmsElement {
   layoutGrow?: boolean
   /** User manually resized height — auto-size stops shrinking below this. */
   manualHeight?: boolean
+  /** Grow element height to fit content. */
+  growHeight?: boolean
   // input element fields
   inputType?: InputType
   placeholder?: string
