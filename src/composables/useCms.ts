@@ -152,19 +152,17 @@ function estimatedChildHeight(el: CmsElement): number {
 function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   const i = state.elements.findIndex((e) => e.id === frameId)
   if (i < 0) return
+
   const frame = state.elements[i]
   if (frame.type !== 'frame') return
+
   const dir = frame.layoutDirection ?? 'none'
   if (dir === 'none') return
+
   const gap = frame.layoutGap ?? 8
   const align = frame.layoutAlign ?? 'start'
   const pad = sidePad(frame)
 
-  // Order children by their position in state.elements (the same ordering moveLayer/moveUp/
-  // moveDown maintain) rather than by current x/y. x/y are themselves last set by this very
-  // function, and estimated vs. later-measured text heights (or drag rounding) can nudge two
-  // siblings' coordinates close enough to flip a coordinate-based sort — silently reordering
-  // the stack on an unrelated edit instead of only when the user actually reorders them.
   const order = new Map(state.elements.map((e, idx) => [e.id, idx]))
   const children = state.elements
     .filter((e) => e.parentId === frameId)
@@ -176,12 +174,14 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   for (const child of children) {
     const idx = nextElements.findIndex((e) => e.id === child.id)
     if (idx < 0) continue
+
     let x: number, y: number
-    let w = child.width,
-      h = child.height
+    let w = child.width
+    let h = child.height
 
     if (dir === 'vertical') {
       y = cursor
+
       if (align === 'stretch') {
         x = pad.l
         w = Math.max(1, frame.width - pad.l - pad.r)
@@ -192,9 +192,11 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
       } else {
         x = pad.l
       }
+
       cursor = y + estimatedChildHeight(child) + gap
     } else {
       x = cursor
+
       if (align === 'stretch') {
         y = pad.t
         h = Math.max(1, frame.height - pad.t - pad.b)
@@ -205,45 +207,61 @@ function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
       } else {
         y = pad.t
       }
+
       cursor = x + w + gap
     }
+
     nextElements[idx] = { ...child, x, y, width: w, height: h }
   }
 
-  // Grow the frame to fit its laid-out children
   if (frame.layoutGrow && !opts.skipGrow && children.length) {
-    // cursor now sits at the trailing edge (with gap). Content-end = cursor - gap.
     const contentEnd = cursor - gap
-    let newW: number, newH: number
+
+    let newW: number
+    let newH: number
+
     if (dir === 'vertical') {
       newH = Math.max(1, contentEnd + pad.b)
-      // Cross axis: fit the widest child
+
       const rightMost = Math.max(
         ...children.map((c) => {
           const cur = nextElements.find((n) => n.id === c.id)!
           return cur.x + cur.width
         }),
       )
+
       newW = Math.max(1, rightMost + pad.r)
     } else {
       newW = Math.max(1, contentEnd + pad.r)
+
       const bottomMost = Math.max(
         ...children.map((c) => {
           const cur = nextElements.find((n) => n.id === c.id)!
           return cur.y + cur.height
         }),
       )
+
       newH = Math.max(1, bottomMost + pad.b)
     }
+
     const fIdx = nextElements.findIndex((e) => e.id === frameId)
     if (fIdx >= 0 && (nextElements[fIdx].width !== newW || nextElements[fIdx].height !== newH)) {
-      nextElements[fIdx] = { ...nextElements[fIdx], width: newW, height: newH }
+      nextElements[fIdx] = {
+        ...nextElements[fIdx],
+        width: newW,
+        height: newH,
+      }
     }
   }
 
   state.elements = nextElements
-}
 
+  // Reflow parent frame if this frame is nested.
+  const updatedFrame = state.elements.find((e) => e.id === frameId)
+  if (updatedFrame?.parentId) {
+    reflowFrame(updatedFrame.parentId, opts)
+  }
+}
 /**
  * Persist a drag-reorder within an auto-layout frame: reflowFrame sorts children by their
  * position in state.elements (see reflowFrame), so dragging one past a sibling only changes
@@ -371,7 +389,10 @@ const actions = {
     if (next.type === 'frame' && layoutKeys.some((k) => k in updates)) {
       reflowFrame(next.id, { skipGrow: isSizeEdit })
     }
-    if (next.parentId) reflowFrame(next.parentId)
+
+    if (next.parentId) {
+      reflowFrame(next.parentId)
+    }
   },
   updateStyles(
     id: string,
@@ -405,7 +426,6 @@ const actions = {
     state.editingTextId = null
     state.allSelected = false
     state.selectedIds = []
-    console.trace(id)
   },
   setSelectedIds(ids: string[]): void {
     state.selectedIds = ids
@@ -859,6 +879,25 @@ const actions = {
   },
   toggleFlexibleHeight(): void {
     state.flexibleHeight = !state.flexibleHeight
+  },
+  toggleAdvancedBorderRadius(id: string): void {
+    const i = findIdx(id)
+    if (i < 0) return
+
+    const target = state.elements[i]
+    target.advancedBorderRadius = !target.advancedBorderRadius
+
+    if (!target.advancedBorderRadius) {
+      target.styles.borderRadius = 0
+      return
+    }
+
+    target.styles.borderRadius = {
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+    }
   },
   togglePreview(): void {
     state.preview = !state.preview

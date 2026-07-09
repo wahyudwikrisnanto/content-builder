@@ -29,6 +29,13 @@ export type ObjectFit = 'cover' | 'contain' | 'fill'
 export type LayoutDirection = 'none' | 'vertical' | 'horizontal'
 export type LayoutAlign = 'start' | 'center' | 'end' | 'stretch'
 
+export interface BorderRadiusOptions {
+  borderTopLeftRadius?: number
+  borderTopRightRadius?: number
+  borderBottomLeftRadius?: number
+  borderBottomRightRadius?: number
+}
+
 export interface ElementStyles {
   fontSize?: number
   fontWeight?: FontWeight | string
@@ -39,7 +46,7 @@ export interface ElementStyles {
   textAlign?: TextAlign
   lineHeight?: number
   letterSpacing?: number
-  borderRadius?: number
+  borderRadius?: BorderRadiusOptions | number
   padding?: number
   paddingTop?: number
   paddingRight?: number
@@ -75,6 +82,7 @@ export interface CmsElement {
   copyEnabled?: boolean
   responsive?: boolean
   clipContent?: boolean
+  advancedBorderRadius?: boolean
   // Auto-layout (frames only). direction 'none' = free positioning
   layoutDirection?: LayoutDirection
   layoutGap?: number

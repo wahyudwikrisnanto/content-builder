@@ -1,6 +1,7 @@
 import hljs from 'highlight.js/lib/common'
 import type { CmsElement } from '../types'
 import type { RenderPayload } from './renderHtml'
+import { borderRadiusCss } from './useBorderRadius'
 
 /**
  * Convert design payload to CKEditor-compatible semantic HTML.
@@ -84,7 +85,7 @@ function renderText(el: CmsElement): string {
 
 function renderImage(el: CmsElement): string {
   if (!el.content) return ''
-  const radius = el.styles.borderRadius ? ` style="border-radius:${el.styles.borderRadius}px"` : ''
+  const radius = el.styles.borderRadius ? ` style="border-radius:${borderRadiusCss(el.styles.borderRadius)}"` : ''
   return `<figure class="image"><img src="${escape(el.content)}" alt=""${radius}></figure>`
 }
 
@@ -100,7 +101,7 @@ function renderShape(el: CmsElement): string {
     s.backgroundColor && s.backgroundColor !== 'transparent'
       ? `background-color:${s.backgroundColor}`
       : '',
-    s.borderRadius != null ? `border-radius:${s.borderRadius}px` : '',
+    s.borderRadius != null ? `border-radius:${borderRadiusCss(s.borderRadius)}` : '',
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}` : '',
     `padding:${s.padding ?? 12}px`,
     s.color ? `color:${s.color}` : '',
@@ -130,7 +131,7 @@ function renderContainer(el: CmsElement, inner: string): string {
     s.backgroundColor && s.backgroundColor !== 'transparent'
       ? `background-color:${s.backgroundColor}`
       : '',
-    s.borderRadius != null ? `border-radius:${s.borderRadius}px` : '',
+    s.borderRadius != null ? `border-radius:${borderRadiusCss(s.borderRadius)}` : '',
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#EBEBEB'}` : '',
     `padding:${s.padding ?? 16}px`,
   ]
@@ -151,7 +152,7 @@ function renderButton(el: CmsElement): string {
     `background-color:${s.backgroundColor || '#2563EB'}`,
     `color:${s.color || '#FFF'}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor}` : 'border:none',
-    `border-radius:${s.borderRadius ?? 8}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 8)}`,
     `font-weight:${s.fontWeight || 600}`,
     `font-size:${s.fontSize ?? 14}px`,
     'text-decoration:none',

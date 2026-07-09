@@ -1,5 +1,6 @@
 import hljs from 'highlight.js/lib/common'
 import type { CmsElement, ElementStyles } from '../types'
+import { borderRadiusCss } from './useBorderRadius'
 
 export type CmsRenderElement = CmsElement
 
@@ -15,10 +16,6 @@ const escape = (s: string): string =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
-
-function px(v: number | undefined, fallback = 0): string {
-  return (v ?? fallback) + 'px'
-}
 
 // Text elements report height:0 until useAutoSize's ResizeObserver measures the mounted
 // DOM node (see useAutoSize.ts) — legit for elements never mounted (e.g. hand-authored or
@@ -90,7 +87,7 @@ function textCss(s: ElementStyles, extra: Record<string, string> = {}): string {
 function boxCss(s: ElementStyles): string {
   const parts: string[] = []
   if (s.backgroundColor) parts.push(`background-color:${s.backgroundColor}`)
-  if (s.borderRadius != null) parts.push(`border-radius:${s.borderRadius}px`)
+  if (s.borderRadius != null) parts.push(`border-radius:${borderRadiusCss(s.borderRadius)}`)
   if (s.borderWidth) parts.push(`border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}`)
   return parts.join(';')
 }
@@ -119,7 +116,7 @@ function renderText(el: CmsRenderElement): string {
     'word-wrap': 'break-word',
     'background-color':
       s.backgroundColor === 'transparent' ? 'transparent' : s.backgroundColor || 'transparent',
-    'border-radius': px(s.borderRadius),
+    'border-radius': borderRadiusCss(s.borderRadius),
     'font-family': 'inherit',
   })
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${style}">${inner}</div></div>`
@@ -129,7 +126,7 @@ function renderImage(el: CmsRenderElement): string {
   const s = el.styles
   const src = el.content?.startsWith('data:') ? '' : el.content
   if (!src) return `<div ${dbg(el)} style="${commonBoxStyle(el)};${boxCss(s)}"></div>`
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${s.borderRadius || 0}px"/></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${borderRadiusCss(s.borderRadius)}"/></div>`
 }
 
 function renderShape(el: CmsRenderElement): string {
@@ -148,17 +145,17 @@ function renderShape(el: CmsRenderElement): string {
 function renderVideo(el: CmsRenderElement): string {
   const s = el.styles
   if (!el.content) {
-    return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background:#18181B;border-radius:${s.borderRadius || 0}px"></div></div>`
+    return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background:#18181B;border-radius:${borderRadiusCss(s.borderRadius)}"></div></div>`
   }
   let src = el.content
   if (src.includes('youtube.com/watch')) src = src.replace('watch?v=', 'embed/')
   if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/')
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${s.borderRadius || 0}px"></iframe></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${borderRadiusCss(s.borderRadius)}"></iframe></div>`
 }
 
 function renderDivider(el: CmsRenderElement): string {
   const s = el.styles
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#DDD'};border-radius:${s.borderRadius || 0}px;opacity:${s.opacity ?? 1}"></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#DDD'};border-radius:${borderRadiusCss(s.borderRadius)};opacity:${s.opacity ?? 1}"></div></div>`
 }
 
 function renderContainer(el: CmsRenderElement): string {
@@ -178,7 +175,7 @@ function renderFrame(el: CmsRenderElement, childRender?: string): string {
         ${commonBoxStyle(el)};
         ${clip};
         background-color:${s.backgroundColor || 'transparent'};
-        border-radius:${s.borderRadius || 0}px;
+        border-radius:${borderRadiusCss(s.borderRadius)};
         ${border}
       ">
         ${childRender ?? ''}
@@ -200,7 +197,7 @@ function renderButton(el: CmsRenderElement): string {
     `background-color:${s.backgroundColor || '#2563EB'}`,
     `color:${s.color || '#FFF'}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#1E40AF'}` : 'border:none',
-    `border-radius:${s.borderRadius ?? 8}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 8)}`,
     `opacity:${s.opacity ?? 1}`,
     `font-size:${s.fontSize ?? 14}px`,
     s.fontWeight ? `font-weight:${s.fontWeight}` : '',
@@ -240,7 +237,7 @@ function renderCode(el: CmsRenderElement): string {
     'width:100%',
     'height:100%',
     `background-color:${s.backgroundColor || '#282C34'}`,
-    `border-radius:${s.borderRadius || 0}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius)}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#3A3A4A'}` : '',
     `opacity:${s.opacity ?? 1}`,
     'overflow:hidden',
@@ -285,7 +282,7 @@ function renderInput(el: CmsRenderElement): string {
     `color:${s.color || '#222'}`,
     `background-color:${s.backgroundColor || '#fff'}`,
     `border:${s.borderWidth ?? 1}px solid ${s.borderColor || '#D1D5DB'}`,
-    `border-radius:${s.borderRadius ?? 6}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 6)}`,
     `padding:${s.padding ?? 10}px`,
     `opacity:${s.opacity ?? 1}`,
     'box-sizing:border-box',
@@ -397,7 +394,7 @@ function flowBoxCss(s: ElementStyles): string {
   const parts: string[] = []
   if (s.backgroundColor && s.backgroundColor !== 'transparent')
     parts.push(`background-color:${s.backgroundColor}`)
-  if (s.borderRadius != null) parts.push(`border-radius:${s.borderRadius}px`)
+  if (s.borderRadius != null) parts.push(`border-radius:${borderRadiusCss(s.borderRadius)}`)
   if (s.borderWidth) parts.push(`border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}`)
   return parts.join(';')
 }
@@ -490,7 +487,7 @@ function flowRenderImage(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   if (!el.content) return ''
   const ar = el.width && el.height ? `aspect-ratio:${el.width}/${el.height}` : ''
-  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:100%;${ar};display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${s.borderRadius || 0}px"/></div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:100%;${ar};display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${borderRadiusCss(s.borderRadius)}"/></div>`
 }
 
 function flowRenderShape(el: CmsRenderElement, mt: number, cw: number): string {
@@ -521,12 +518,12 @@ function flowRenderVideo(el: CmsRenderElement, mt: number, cw: number): string {
   let src = el.content
   if (src.includes('youtube.com/watch')) src = src.replace('watch?v=', 'embed/')
   if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/')
-  return `<div style="${flowWrap(el, mt, cw)};aspect-ratio:16/9"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${s.borderRadius || 0}px"></iframe></div>`
+  return `<div style="${flowWrap(el, mt, cw)};aspect-ratio:16/9"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${borderRadiusCss(s.borderRadius)}"></iframe></div>`
 }
 
 function flowRenderDivider(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
-  return `<div style="${flowWrap(el, mt, cw)};height:${el.height}px;background-color:${s.backgroundColor || '#DDD'};border-radius:${s.borderRadius || 0}px"></div>`
+  return `<div style="${flowWrap(el, mt, cw)};height:${el.height}px;background-color:${s.backgroundColor || '#DDD'};border-radius:${borderRadiusCss(s.borderRadius)}"></div>`
 }
 
 function flowRenderButton(el: CmsRenderElement, mt: number, cw: number): string {
@@ -538,7 +535,7 @@ function flowRenderButton(el: CmsRenderElement, mt: number, cw: number): string 
     `background-color:${s.backgroundColor || '#2563EB'}`,
     `color:${s.color || '#FFF'}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#1E40AF'}` : 'border:none',
-    `border-radius:${s.borderRadius ?? 8}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 8)}`,
     `font-size:${s.fontSize ?? 14}px`,
     s.fontWeight ? `font-weight:${s.fontWeight}` : '',
     `text-align:${s.textAlign || 'center'}`,
@@ -573,7 +570,7 @@ function flowRenderCode(el: CmsRenderElement, mt: number, cw: number): string {
   const boxStyle = [
     `width:100%`,
     `background-color:${s.backgroundColor || '#282C34'}`,
-    `border-radius:${s.borderRadius || 0}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius)}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#3A3A4A'}` : '',
     'overflow:hidden',
   ]
@@ -603,7 +600,7 @@ function flowRenderInput(el: CmsRenderElement, mt: number, cw: number): string {
     `color:${s.color || '#222'}`,
     `background-color:${s.backgroundColor || '#fff'}`,
     `border:${s.borderWidth ?? 1}px solid ${s.borderColor || '#D1D5DB'}`,
-    `border-radius:${s.borderRadius ?? 6}px`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 6)}`,
     `padding:${s.padding ?? 10}px`,
     'box-sizing:border-box',
     'outline:none',
@@ -690,7 +687,7 @@ export function renderFlowHtml(payload: RenderPayload): string {
         s.backgroundColor && s.backgroundColor !== 'transparent'
           ? `background-color:${s.backgroundColor}`
           : ''
-      const borderRadius = s.borderRadius != null ? `border-radius:${s.borderRadius}px` : ''
+      const borderRadius = s.borderRadius != null ? `border-radius:${borderRadiusCss(s.borderRadius)}` : ''
       const border = s.borderWidth
         ? `border:${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}`
         : ''

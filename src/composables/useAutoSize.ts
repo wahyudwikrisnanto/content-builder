@@ -1,5 +1,4 @@
-import { onMounted, onUnmounted, watch, nextTick, type Ref } from 'vue'
-import { useCms } from './useCms'
+import { onMounted, onUnmounted, watch, type Ref } from 'vue'
 import type { CmsElement } from '../types'
 
 /**
@@ -12,23 +11,9 @@ export function useAutoSize(
   getNode: () => HTMLElement | null,
   deps: () => unknown,
 ) {
-  const cms = useCms()
   let ro: ResizeObserver | null = null
   let mo: MutationObserver | null = null
   let observed: HTMLElement | null = null
-  const EPS = 1
-
-  function measure(): void {
-    const node = getNode()
-    const el = element.value
-    if (!node || !el) return
-    // Manual height: don't touch the box at all — user is in control.
-    if (el.manualHeight) return
-    const needH = Math.ceil(node.scrollHeight)
-    if (Math.abs(needH - el.height) > EPS) {
-      cms.updateElement(el.id, { height: needH }, { noHistory: true })
-    }
-  }
 
   function schedule() {
     // nextTick(() => {

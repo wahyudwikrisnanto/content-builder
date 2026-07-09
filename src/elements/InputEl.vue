@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -32,7 +33,7 @@ const baseStyle = computed<CSSProperties>(() => ({
   border: s.value.borderWidth
     ? `${s.value.borderWidth}px solid ${s.value.borderColor}`
     : '1px solid #D1D5DB',
-  borderRadius: (s.value.borderRadius ?? 6) + 'px',
+  borderRadius: borderRadiusCss(s.value.borderRadius, 6),
   padding: (s.value.padding ?? 10) + 'px',
   opacity: s.value.opacity ?? 1,
   boxSizing: 'border-box' as const,

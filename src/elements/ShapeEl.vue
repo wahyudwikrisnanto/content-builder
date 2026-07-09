@@ -5,6 +5,7 @@ import { useCms } from '../composables/useCms'
 import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
 import { paddingValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -35,7 +36,7 @@ const boxStyle = computed<CSSProperties>(() => {
     width: '100%',
     height: '100%',
     backgroundColor: s.backgroundColor,
-    borderRadius: (s.borderRadius ?? 0) + 'px',
+    borderRadius: borderRadiusCss(s.borderRadius),
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
     opacity: s.opacity,
     display: 'flex',

@@ -832,11 +832,21 @@
 }
 
 .cb-root .prop-hint {
-  padding: 24px 14px;
   color: var(--cb-text-3);
   font-size: 12px;
-  text-align: center;
 }
+
+.cb-root .prop-hint.prop-hint--left {
+  text-align: left;
+}
+
+.cb-root .prop-hint.prop-hint--center {
+  text-align: center;
+} 
+
+.cb-root .prop-hint.prop-hint--end {
+  text-align: end;
+} 
 
 .cb-root .color-input-wrap {
   display: flex;
@@ -907,6 +917,10 @@
 .cb-root .toggle-btn:hover {
   background: var(--cb-bg-hover);
   color: var(--cb-text-1);
+}
+.cb-root .toggle-btn:not(.toggle-group *) {
+  border-radius: 4px;
+  border: 1px solid var(--cb-border);
 }
 .cb-root .toggle-btn.active {
   background: var(--cb-accent);

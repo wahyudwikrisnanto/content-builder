@@ -5,6 +5,7 @@ import { useCms } from '../composables/useCms'
 import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
 import { paddingValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -48,7 +49,7 @@ const baseStyle = computed<CSSProperties>(() => {
     textAlign: s.textAlign,
     lineHeight: s.lineHeight,
     letterSpacing: s.letterSpacing + 'px',
-    borderRadius: s.borderRadius + 'px',
+    borderRadius: borderRadiusCss(s.borderRadius),
     overflow: props.isEditing ? 'visible' : 'hidden',
     wordWrap: 'break-word',
     outline: 'none',

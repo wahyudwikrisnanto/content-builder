@@ -4,6 +4,7 @@ import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { textStrokeStyle } from '../composables/textStroke'
 import { paddingValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -23,7 +24,7 @@ const btnStyle = computed<CSSProperties>(() => {
     backgroundColor: s.backgroundColor || '#2563EB',
     color: s.color || '#FFFFFF',
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
-    borderRadius: (s.borderRadius ?? 8) + 'px',
+    borderRadius: borderRadiusCss(s.borderRadius, 8),
     opacity: s.opacity ?? 1,
     fontSize: (s.fontSize ?? 14) + 'px',
     fontWeight: s.fontWeight as CSSProperties['fontWeight'],

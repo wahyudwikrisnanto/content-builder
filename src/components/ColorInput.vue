@@ -48,7 +48,7 @@ function clear(): void {
     </div>
     <input
       class="color-hex-input"
-      :value="isTransparent ? 'none' : hex"
+      :value="isTransparent ? 'Transparent' : hex"
       @input="onText"
       @blur="onBlur"
     />
