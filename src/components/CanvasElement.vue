@@ -17,6 +17,7 @@ import FrameEl from '../elements/FrameEl.vue'
 import CodeEl from '../elements/CodeEl.vue'
 import ButtonEl from '../elements/ButtonEl.vue'
 import InputEl from '../elements/InputEl.vue'
+import IconEl from '../elements/IconEl.vue'
 import ResizeHandles from './ResizeHandles.vue'
 import type { CmsElement, ElementType } from '../types'
 import type { Component } from 'vue'
@@ -43,6 +44,7 @@ const RENDERERS: Record<ElementType, Component> = {
   code: CodeEl,
   button: ButtonEl,
   input: InputEl,
+  icon: IconEl,
 }
 
 const activeRenderer = computed<Component>(() => {

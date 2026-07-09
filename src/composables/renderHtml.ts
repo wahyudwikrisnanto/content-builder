@@ -323,6 +323,15 @@ function renderInput(el: CmsRenderElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
 }
 
+function renderIcon(el: CmsRenderElement): string {
+  const s = el.styles
+  const name = el.content || 'lucide:star'
+  // Iconify SVG via public API — works in static HTML export
+  const [prefix, ...rest] = name.split(':')
+  const iconId = rest.join(':')
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)};display:flex;align-items:center;justify-content:center;color:${s.color || 'currentColor'};opacity:${s.opacity ?? 1}"><img src="https://api.iconify.design/${prefix}/${iconId}.svg?color=${encodeURIComponent(s.color || '#222222')}" style="width:100%;height:100%" alt="${escape(name)}" /></div>`
+}
+
 const RENDERERS: Record<string, (el: CmsRenderElement, childRender?: string) => string> = {
   text: renderText,
   image: renderImage,
@@ -334,6 +343,7 @@ const RENDERERS: Record<string, (el: CmsRenderElement, childRender?: string) => 
   button: renderButton,
   code: renderCode,
   input: renderInput,
+  icon: renderIcon,
 }
 
 /**

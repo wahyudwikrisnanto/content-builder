@@ -9,6 +9,7 @@ export type ElementType =
   | 'code'
   | 'button'
   | 'input'
+  | 'icon'
 export type InputType =
   | 'text'
   | 'email'
@@ -124,6 +125,7 @@ export type FactoryKey =
   | 'input-select'
   | 'input-checkbox'
   | 'input-radio'
+  | 'icon'
 
 export type Factory = (x?: number, y?: number) => CmsElement
 

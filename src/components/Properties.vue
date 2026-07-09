@@ -40,6 +40,7 @@ const TYPE_LABELS: Record<ElementType, string> = {
   code: 'Code',
   button: 'Button',
   input: 'Input',
+  icon: 'Icon',
 }
 
 const INPUT_TYPES: { v: InputType; label: string }[] = [
@@ -791,6 +792,28 @@ const headerLabel = computed(() => {
           />
           <span>Show copy button</span>
         </label>
+      </div>
+    </div>
+
+    <div v-if="sel.type === 'icon'" class="prop-section">
+      <div class="prop-section-title">Icon</div>
+      <div class="prop-row">
+        <span class="prop-label">Name</span>
+        <input
+          class="prop-input"
+          type="text"
+          placeholder="lucide:star"
+          :value="sel.content || ''"
+          @input="upd(sel.id, 'content', targetValue($event))"
+        />
+      </div>
+      <div class="prop-hint" :style="{ marginLeft: '52px', fontSize: '10px' }">*(any Iconify icon — e.g. lucide:star, mdi:home)</div>
+      <div class="prop-row">
+        <span class="prop-label">Color</span>
+        <ColorInput
+          :model-value="sel.styles.color"
+          @update:model-value="(v: string) => sty(sel!.id, 'color', v)"
+        />
       </div>
     </div>
 
