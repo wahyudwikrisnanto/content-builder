@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, type CSSProperties } from 'vue'
+import { computed } from 'vue'
 import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
-import { computeSnap } from '../composables/snapping'
+import { computeSnap, translateGuides } from '../composables/snapping'
 import { modKeys } from '../composables/useModifierKeys'
 import { usePlugins, findRendererPlugin, findActivatorPlugin } from '../composables/usePlugins'
 import { openDialog } from '../composables/openDialog'
@@ -22,9 +22,16 @@ import ResizeHandles from './ResizeHandles.vue'
 import type { CmsElement, ElementType } from '../types'
 import type { Component } from 'vue'
 
-const props = defineProps<{ element: CmsElement; isSelected: boolean; isEditing: boolean }>()
+const props = defineProps<{ element: CmsElement }>()
 const cms = useCms()
 const plugins = usePlugins()
+
+const isSelected = computed(
+  () =>
+    cms.state.selectedId === props.element.id ||
+    cms.state.selectedIds.includes(props.element.id),
+)
+const isEditing = computed(() => cms.state.editingTextId === props.element.id)
 
 const RENDERERS: Record<ElementType, Component> = {
   text: TextEl,
@@ -45,37 +52,13 @@ const activeRenderer = computed<Component>(() => {
   return plugin ? plugin.component : RENDERERS[props.element.type]
 })
 
-// Clip-path = intersection of every ancestor frame with clipContent:true.
-// Skip while selected or in preview so selection outline + resize handles stay visible.
-const clipStyle = computed<CSSProperties>(() => {
-  if (props.isSelected || cms.state.preview) return {}
-  if (!props.element.parentId) return {}
-  const byId = new Map(cms.state.elements.map((e) => [e.id, e]))
-  let minX = -Infinity,
-    minY = -Infinity,
-    maxX = Infinity,
-    maxY = Infinity
-  let has = false
-  let cur = byId.get(props.element.parentId)
-  while (cur) {
-    if (cur.type === 'frame' && cur.clipContent) {
-      has = true
-      if (cur.x > minX) minX = cur.x
-      if (cur.y > minY) minY = cur.y
-      if (cur.x + cur.width < maxX) maxX = cur.x + cur.width
-      if (cur.y + cur.height < maxY) maxY = cur.y + cur.height
-    }
-    cur = cur.parentId ? byId.get(cur.parentId) : undefined
-  }
-  if (!has) return {}
-  const top = Math.max(0, minY - props.element.y)
-  const left = Math.max(0, minX - props.element.x)
-  const right = Math.max(0, props.element.x + props.element.width - maxX)
-  const bottom = Math.max(0, props.element.y + props.element.height - maxY)
-  return { clipPath: `inset(${top}px ${right}px ${bottom}px ${left}px)` }
-})
-
 const isFrame = computed(() => props.element.type === 'frame')
+
+const children = computed(() =>
+  cms.state.elements.filter(
+    (e) => e.parentId === props.element.id && cms.isEffectivelyVisible(e.id),
+  ),
+)
 
 function beginDragFor(target: CmsElement, e: MouseEvent): void {
   const z = cms.state.zoom
@@ -130,18 +113,19 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       return
     }
     const siblings = cms.state.elements.filter(
-      (e) => e.id !== target.id && cms.isEffectivelyVisible(e.id),
+      (e) => e.id !== target.id && e.parentId === target.parentId && cms.isEffectivelyVisible(e.id),
     )
+    const { containerWidth, containerHeight, origin } = cms.snapContainerFor(target)
     const parentBox = skipParentClamp ? null : cms.parentInnerBox(target)
     const snap = computeSnap(
       { x: rawX, y: rawY, width: target.width, height: target.height },
       siblings,
-      cms.state.canvasWidth,
-      cms.effectiveHeight.value,
+      containerWidth,
+      containerHeight,
       6 / z,
       parentBox ?? undefined,
     )
-    cms.setGuides(snap.guides)
+    cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
     cms.move(target.id, snap.x, snap.y, { skipParentClamp })
   }
   const onUp = (): void => {
@@ -185,7 +169,7 @@ function findTopFrameId(startId: string): string | null {
 
 function onMouseDown(e: MouseEvent): void {
   if (cms.state.preview) return
-  if (props.element.locked || props.isEditing) return
+  if (props.element.locked || isEditing.value) return
   e.stopPropagation()
 
   // Multi-select drag: if this element is part of a multi-selection, drag the whole group
@@ -200,7 +184,7 @@ function onMouseDown(e: MouseEvent): void {
   // Figma-style: clicking a child inside a frame selects the frame
   // (so you can drag it). Double-click drills into the child.
   const topFrameId = findTopFrameId(props.element.id)
-  if (!deepPick && topFrameId && props.element.type !== 'frame' && !props.isSelected) {
+  if (!deepPick && topFrameId && props.element.type !== 'frame' && !isSelected.value) {
     const frameSelected = cms.state.selectedId === topFrameId
     if (!frameSelected) {
       cms.select(topFrameId)
@@ -213,7 +197,7 @@ function onMouseDown(e: MouseEvent): void {
   }
 
   // Standard: first click selects, second click drags
-  if (!props.isSelected) {
+  if (!isSelected.value) {
     cms.select(props.element.id)
     return
   }
@@ -235,7 +219,7 @@ async function onDblClick(): Promise<void> {
 
   // If element sits inside a frame and isn't yet selected, double-click drills in
   const topFrameId = findTopFrameId(props.element.id)
-  if (topFrameId && props.element.type !== 'frame' && !props.isSelected) {
+  if (topFrameId && props.element.type !== 'frame' && !isSelected.value) {
     cms.select(props.element.id)
     return
   }
@@ -268,6 +252,7 @@ async function onDblClick(): Promise<void> {
 
 <template>
   <div
+    :data-element-id="element.id"
     :class="[
       'canvas-el',
       {
@@ -284,7 +269,6 @@ async function onDblClick(): Promise<void> {
       top: element.y + 'px',
       width: element.width + 'px',
       height: element.height + 'px',
-      ...clipStyle,
     }"
     @mousedown="onMouseDown"
     @dblclick="onDblClick"
@@ -322,7 +306,9 @@ async function onDblClick(): Promise<void> {
         opacity: element.styles.opacity != null ? element.styles.opacity : 1,
       }"
     >
-      <component :is="activeRenderer" :element="element" :is-editing="isEditing" />
+      <component :is="activeRenderer" :element="element" :is-editing="isEditing">
+        <CanvasElement v-for="child in children" :key="child.id" :element="child" />
+      </component>
     </div>
     <ResizeHandles
       v-if="isSelected && !element.locked && !isEditing && !cms.state.preview"

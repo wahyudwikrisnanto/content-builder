@@ -1,29 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { computed, ref } from 'vue'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useCms } from '../composables/useCms'
-import { renderHtml, renderFlowHtml, bindCopyButtons } from '../composables/renderHtml'
+import { renderHtml, renderFlowHtml } from '../composables/renderHtml'
 import Icon from '../icons/Icon.vue'
 
 const cms = useCms()
-const stageRef = ref<HTMLElement | null>(null)
 const responsive = ref(false)
-let unbind: (() => void) | null = null
-
-onMounted(() => {
-  if (stageRef.value) unbind = bindCopyButtons(stageRef.value)
-})
-onUnmounted(() => {
-  unbind?.()
-})
-watch(
-  () => cms.state.elements.length,
-  async () => {
-    await nextTick()
-    unbind?.()
-    if (stageRef.value) unbind = bindCopyButtons(stageRef.value)
-  },
-)
 
 const payload = computed(() => ({
   canvas: {
@@ -64,7 +47,6 @@ const html = computed(() =>
       <div
         class="preview-stage"
         :class="{ 'preview-stage--flow': responsive }"
-        ref="stageRef"
         v-html="html"
       ></div>
     </div>

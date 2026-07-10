@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import Icon from '../icons/Icon.vue'
 import { useCms } from '../composables/useCms'
-import { radiusValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement }>()
@@ -24,7 +24,7 @@ const embedSrc = computed(() => {
       width: '100%',
       height: '100%',
       border: 'none',
-      borderRadius: radiusValue(element.styles.borderRadius),
+      borderRadius: borderRadiusCss(element.styles.borderRadius),
       pointerEvents: cms.state.preview ? 'auto' : 'none',
     }"
     allowfullscreen

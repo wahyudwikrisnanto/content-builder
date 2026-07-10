@@ -13,6 +13,7 @@ import type {
   ListType,
   CmsElement,
   ElementStyles,
+  BorderRadiusOptions,
 } from '../types'
 
 const cms = useCms()
@@ -166,7 +167,7 @@ function upd(
 ): void {
   cms.updateElement(id, { [k]: v } as Partial<CmsElement>)
 }
-function sty(id: string, k: string, v: number | string): void {
+function sty(id: string, k: string, v: number | string | Record<string, number | string>): void {
   cms.updateStyles(id, { [k]: v } as Partial<ElementStyles>)
 }
 
@@ -310,7 +311,9 @@ const headerLabel = computed(() => {
         </label>
       </div>
     </div>
-    <div class="prop-hint">Select an element to edit its properties</div>
+    <div class="prop-hint prop-hint--center" :style="{ padding: '24px 14px' }">
+      Select an element to edit its properties
+    </div>
   </div>
 
   <div v-else class="properties">
@@ -406,6 +409,24 @@ const headerLabel = computed(() => {
           Reset to auto height
         </button>
       </div>
+      <div class="prop-row">
+        <span class="prop-label">Stretch</span>
+        <div style="display:flex;gap:4px">
+          <button
+            :class="['toggle-btn', { active: !!sel.responsive }]"
+            title="Stretch to full canvas width"
+            @click="cms.toggleResponsive(sel.id)"
+          >
+            <Icon name="responsive" :size="14" />
+          </button>
+          <button
+            v-if="sel.type === 'text'"
+            :class="['toggle-btn', { active: !!sel.growHeight }]"
+            title="Grow height with content"
+            @click="cms.updateElement(sel.id, { growHeight: !sel.growHeight })"
+          ><Icon name="flex-height" :size="14" /></button>
+        </div>
+      </div>
     </div>
 
     <div
@@ -490,7 +511,7 @@ const headerLabel = computed(() => {
           <button
             :class="['toggle-btn', { active: sel.styles.fontStyle === 'italic' }]"
             @click="
-              sty(sel.id, 'fontStyle', sel.styles.fontStyle === 'italic' ? 'normal' : 'italic')
+              sty(sel!.id, 'fontStyle', sel!.styles.fontStyle === 'italic' ? 'normal' : 'italic')
             "
           >
             <Icon name="italic" :size="14" />
@@ -499,9 +520,9 @@ const headerLabel = computed(() => {
             :class="['toggle-btn', { active: sel.styles.textDecoration === 'underline' }]"
             @click="
               sty(
-                sel.id,
+                sel!.id,
                 'textDecoration',
-                sel.styles.textDecoration === 'underline' ? 'none' : 'underline',
+                sel!.styles.textDecoration === 'underline' ? 'none' : 'underline',
               )
             "
           >
@@ -920,61 +941,81 @@ const headerLabel = computed(() => {
           <option value="fill">Fill</option>
         </select>
       </div>
-      <div class="prop-row-pair">
-        <div class="prop-row">
-          <span
-            class="prop-label"
-            title="Horizontal offset. Accepts px or % (e.g. 100px, 50%, -20px)"
-            >X</span
+      <div class="prop-row">
+        <span class="prop-label">X</span>
+        <input
+          class="prop-input"
+          type="text"
+          placeholder="50%"
+          title="Horizontal offset — px or % (e.g. 100px, 50%, -20px)"
+          :value="parseImgPos(sel.styles.objectPosition).x"
+          @input="setImgPosX(sel.id, targetValue($event))"
+        />
+      </div>
+      <div class="prop-row">
+        <span class="prop-label"></span>
+        <div class="toggle-group" :style="{ flex: 'none' }">
+          <button
+            :class="['toggle-btn', { active: parseImgPos(sel.styles.objectPosition).x === '0%' }]"
+            title="Left"
+            @click="setImgPosX(sel.id, '0%')"
           >
-          <input
-            class="prop-input"
-            type="text"
-            placeholder="50%"
-            title="Accepts px or % (e.g. 100px, 50%, -20px)"
-            :value="parseImgPos(sel.styles.objectPosition).x"
-            @input="setImgPosX(sel.id, targetValue($event))"
-          />
-        </div>
-        <div class="prop-row">
-          <span class="prop-label" title="Vertical offset. Accepts px or % (e.g. 100px, 50%, -20px)"
-            >Y</span
+            <Icon name="align-left-edge" :size="13" />
+          </button>
+          <button
+            :class="['toggle-btn', { active: parseImgPos(sel.styles.objectPosition).x === '50%' }]"
+            title="Center X"
+            @click="setImgPosX(sel.id, '50%')"
           >
-          <input
-            class="prop-input"
-            type="text"
-            placeholder="50%"
-            title="Accepts px or % (e.g. 100px, 50%, -20px)"
-            :value="parseImgPos(sel.styles.objectPosition).y"
-            @input="setImgPosY(sel.id, targetValue($event))"
-          />
+            <Icon name="align-center-h" :size="13" />
+          </button>
+          <button
+            :class="['toggle-btn', { active: parseImgPos(sel.styles.objectPosition).x === '100%' }]"
+            title="Right"
+            @click="setImgPosX(sel.id, '100%')"
+          >
+            <Icon name="align-right-edge" :size="13" />
+          </button>
         </div>
       </div>
-      <div class="prop-hint" :style="{ marginLeft: '52px' }">
-        Accepts px or % — negative values allowed
+      <div class="prop-row">
+        <span class="prop-label">Y</span>
+        <input
+          class="prop-input"
+          type="text"
+          placeholder="50%"
+          title="Vertical offset — px or % (e.g. 100px, 50%, -20px)"
+          :value="parseImgPos(sel.styles.objectPosition).y"
+          @input="setImgPosY(sel.id, targetValue($event))"
+        />
       </div>
-      <div class="prop-row-pair">
-        <div class="prop-row">
-          <span class="prop-label">H</span>
-          <div class="toggle-group" :style="{ flex: 1 }">
-            <button class="toggle-btn" title="Left" @click="setImgPosX(sel.id, '0%')">←</button>
-            <button class="toggle-btn" title="Center X" @click="setImgPosX(sel.id, '50%')">
-              ◎
-            </button>
-            <button class="toggle-btn" title="Right" @click="setImgPosX(sel.id, '100%')">→</button>
-          </div>
-        </div>
-        <div class="prop-row">
-          <span class="prop-label">V</span>
-          <div class="toggle-group" :style="{ flex: 1 }">
-            <button class="toggle-btn" title="Top" @click="setImgPosY(sel.id, '0%')">↑</button>
-            <button class="toggle-btn" title="Center Y" @click="setImgPosY(sel.id, '50%')">
-              ◎
-            </button>
-            <button class="toggle-btn" title="Bottom" @click="setImgPosY(sel.id, '100%')">↓</button>
-          </div>
+      <div class="prop-row">
+        <span class="prop-label"></span>
+        <div class="toggle-group" :style="{ flex: 'none' }">
+          <button
+            :class="['toggle-btn', { active: parseImgPos(sel.styles.objectPosition).y === '0%' }]"
+            title="Top"
+            @click="setImgPosY(sel.id, '0%')"
+          >
+            <Icon name="align-top-edge" :size="13" />
+          </button>
+          <button
+            :class="['toggle-btn', { active: parseImgPos(sel.styles.objectPosition).y === '50%' }]"
+            title="Center Y"
+            @click="setImgPosY(sel.id, '50%')"
+          >
+            <Icon name="align-center-v" :size="13" />
+          </button>
+          <button
+            :class="['toggle-btn', { active: parseImgPos(sel.styles.objectPosition).y === '100%' }]"
+            title="Bottom"
+            @click="setImgPosY(sel.id, '100%')"
+          >
+            <Icon name="align-bottom-edge" :size="13" />
+          </button>
         </div>
       </div>
+      <div class="prop-hint" :style="{ fontSize: '10px' }">*Accepts px or % — e.g. 50%, -20px</div>
     </div>
 
     <div v-if="sel.type === 'video'" class="prop-section">
@@ -1046,6 +1087,28 @@ const headerLabel = computed(() => {
           />
           <span>Show copy button</span>
         </label>
+      </div>
+    </div>
+
+    <div v-if="sel.type === 'icon'" class="prop-section">
+      <div class="prop-section-title">Icon</div>
+      <div class="prop-row">
+        <span class="prop-label">Name</span>
+        <input
+          class="prop-input"
+          type="text"
+          placeholder="lucide:star"
+          :value="sel.content || ''"
+          @input="upd(sel.id, 'content', targetValue($event))"
+        />
+      </div>
+      <div class="prop-hint" :style="{ marginLeft: '52px', fontSize: '10px' }">*(any Iconify icon — e.g. lucide:star, mdi:home)</div>
+      <div class="prop-row">
+        <span class="prop-label">Color</span>
+        <ColorInput
+          :model-value="sel.styles.color"
+          @update:model-value="(v: string) => sty(sel!.id, 'color', v)"
+        />
       </div>
     </div>
 
@@ -1127,7 +1190,7 @@ const headerLabel = computed(() => {
             type="checkbox"
             :checked="!!sel.clipContent"
             @change="
-              cms.updateElement(sel.id, {
+              cms.updateElement(sel!.id, {
                 clipContent: ($event.target as HTMLInputElement).checked,
               })
             "
@@ -1368,7 +1431,7 @@ const headerLabel = computed(() => {
               type="checkbox"
               :checked="!!sel.layoutGrow"
               @change="
-                cms.updateElement(sel.id, {
+                cms.updateElement(sel!.id, {
                   layoutGrow: ($event.target as HTMLInputElement).checked,
                 })
               "
@@ -1380,9 +1443,9 @@ const headerLabel = computed(() => {
     </div>
 
     <div class="prop-section">
-      <div class="prop-section-title">Align to canvas</div>
+      <div class="prop-section-title">Alignment</div>
       <div class="prop-row">
-        <span class="prop-label">H</span>
+        <span class="prop-label">Horizontal</span>
         <div class="toggle-group">
           <button class="toggle-btn" title="Align left" @click="cms.alignH(sel.id, 'left')">
             <Icon name="align-left-edge" :size="14" />
@@ -1400,7 +1463,7 @@ const headerLabel = computed(() => {
         </div>
       </div>
       <div class="prop-row">
-        <span class="prop-label">V</span>
+        <span class="prop-label">Vertical</span>
         <div class="toggle-group">
           <button class="toggle-btn" title="Align top" @click="cms.alignV(sel.id, 'top')">
             <Icon name="align-top-edge" :size="14" />
@@ -1416,17 +1479,6 @@ const headerLabel = computed(() => {
             <Icon name="align-bottom-edge" :size="14" />
           </button>
         </div>
-      </div>
-      <div class="prop-row">
-        <span class="prop-label">Fill W</span>
-        <label class="prop-toggle">
-          <input
-            type="checkbox"
-            :checked="!!sel.responsive"
-            @change="cms.toggleResponsive(sel.id)"
-          />
-          <span>Full canvas width</span>
-        </label>
       </div>
     </div>
 

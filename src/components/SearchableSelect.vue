@@ -108,17 +108,17 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
   width: 100%;
   height: 30px;
   padding: 0 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  background: var(--bg-panel);
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-r-sm);
+  background: var(--cb-bg-panel);
   font-size: 12px;
   font-family: inherit;
-  color: var(--text-1);
+  color: var(--cb-text-1);
   cursor: pointer;
   outline: none;
 }
 .ss-trigger:hover {
-  border-color: var(--text-3);
+  border-color: var(--cb-text-3);
 }
 .ss-value {
   overflow: hidden;
@@ -128,7 +128,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
   flex: 1;
 }
 .ss-chev {
-  color: var(--text-3);
+  color: var(--cb-text-3);
   font-size: 10px;
   margin-left: 6px;
 }
@@ -137,10 +137,10 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-lg);
+  background: var(--cb-bg-panel);
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-r-sm);
+  box-shadow: var(--cb-shadow-lg);
   z-index: 1000;
   padding: 4px;
 }
@@ -148,15 +148,17 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
   width: 100%;
   height: 28px;
   padding: 0 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--cb-border);
   border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
   outline: none;
   margin-bottom: 4px;
+  background: var(--cb-bg-panel);
+  color: var(--cb-text-1);
 }
 .ss-input:focus {
-  border-color: var(--selection);
+  border-color: var(--cb-selection);
 }
 .ss-list {
   max-height: 200px;
@@ -166,20 +168,20 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
   padding: 6px 8px;
   border-radius: 4px;
   font-size: 12px;
-  color: var(--text-1);
+  color: var(--cb-text-1);
   cursor: pointer;
 }
 .ss-opt.active {
-  background: var(--bg-hover);
+  background: var(--cb-bg-hover);
 }
 .ss-opt.selected {
-  color: var(--selection);
+  color: var(--cb-selection);
   font-weight: 500;
 }
 .ss-empty {
   padding: 8px;
   font-size: 11.5px;
-  color: var(--text-3);
+  color: var(--cb-text-3);
   text-align: center;
 }
 </style>

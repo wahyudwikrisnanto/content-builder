@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { computed } from 'vue'
 import 'highlight.js/styles/atom-one-dark.css'
-import { renderHtml, renderFlowHtml, bindCopyButtons } from './composables/renderHtml'
+import { renderHtml, renderFlowHtml } from './composables/renderHtml'
 
 const props = defineProps<{
   json: string
   responsive?: boolean
 }>()
-
-const rootRef = ref<HTMLElement | null>(null)
-let unbind: (() => void) | null = null
 
 const html = computed(() => {
   if (!props.json) return ''
@@ -23,17 +20,8 @@ const html = computed(() => {
     return ''
   }
 })
-
-function rebind(): void {
-  unbind?.()
-  if (rootRef.value) unbind = bindCopyButtons(rootRef.value)
-}
-
-onMounted(rebind)
-onUnmounted(() => unbind?.())
-watch(html, () => nextTick(rebind))
 </script>
 
 <template>
-  <div ref="rootRef" class="content-renderer" v-html="html" />
+  <div class="content-renderer" v-html="html" />
 </template>

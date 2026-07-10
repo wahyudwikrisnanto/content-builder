@@ -48,10 +48,12 @@ onMounted(() => {
   if (rounded < 1) cms.setZoom(Math.max(0.25, rounded))
   // passive:false required to call preventDefault on wheel
   el.addEventListener('wheel', onWheel, { passive: false })
+  document.addEventListener('click', onClickOutsideWorkspace)
 })
 
 onUnmounted(() => {
   scrollRef.value?.removeEventListener('wheel', onWheel)
+  document.removeEventListener('click', onClickOutsideWorkspace)
 })
 
 function onDrop(e: DragEvent): void {
@@ -105,7 +107,8 @@ function onScrollMouseDown(e: MouseEvent): void {
       const hits = cms.state.elements
         .filter((el) => {
           if (!cms.isEffectivelyVisible(el.id)) return false
-          return el.x < rx2 && el.x + el.width > rx1 && el.y < ry2 && el.y + el.height > ry1
+          const abs = cms.absolutePosition(el)
+          return abs.x < rx2 && abs.x + el.width > rx1 && abs.y < ry2 && abs.y + el.height > ry1
         })
         .map((el) => el.id)
       if (hits.length > 1) cms.setSelectedIds(hits)
@@ -116,6 +119,16 @@ function onScrollMouseDown(e: MouseEvent): void {
 
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
+}
+
+function onClickOutsideWorkspace(e: MouseEvent): void {
+  const target = e.target as Element;
+
+  if (target && !target.closest('.cb-root') && !target.closest('.cb-resize-handles-wrapper')) {
+    cms.select(null);
+    cms.state.allSelected = false;
+    cms.state.selectedIds = [];
+  }
 }
 </script>
 
@@ -145,12 +158,7 @@ function onScrollMouseDown(e: MouseEvent): void {
           <div class="canvas-inner" :style="{ position: 'absolute', inset: 0 }"></div>
 
           <template v-for="el in cms.state.elements" :key="el.id">
-            <CanvasElement
-              v-if="cms.isEffectivelyVisible(el.id)"
-              :element="el"
-              :is-selected="el.id === cms.state.selectedId || cms.state.selectedIds.includes(el.id)"
-              :is-editing="el.id === cms.state.editingTextId"
-            />
+            <CanvasElement v-if="!el.parentId && cms.isEffectivelyVisible(el.id)" :element="el" />
           </template>
 
           <Guides />

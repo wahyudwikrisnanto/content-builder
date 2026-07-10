@@ -4,7 +4,8 @@ import type { CSSProperties } from 'vue'
 import hljs from 'highlight.js/lib/common'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useCms } from '../composables/useCms'
-import { paddingValue, radiusValue } from '../composables/styleHelpers'
+import { paddingValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import Icon from '../icons/Icon.vue'
 import type { CmsElement } from '../types'
 
@@ -39,11 +40,12 @@ async function copyCode(e: MouseEvent): Promise<void> {
 
 const boxStyle = computed<CSSProperties>(() => {
   const s = props.element.styles
+
   return {
     width: '100%',
     height: '100%',
     backgroundColor: s.backgroundColor || '#282C34',
-    borderRadius: radiusValue(s.borderRadius),
+    borderRadius: borderRadiusCss(s.borderRadius),
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
     opacity: s.opacity ?? 1,
     overflow: 'hidden',

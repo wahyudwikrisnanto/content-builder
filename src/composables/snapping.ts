@@ -120,6 +120,16 @@ export function computeSnap(
   return { x: nx, y: ny, guides: dedupeGuides(guides) }
 }
 
+/** Shift guides from frame-local space into canvas-absolute space for rendering. */
+export function translateGuides(guides: Guide[], originX: number, originY: number): Guide[] {
+  if (originX === 0 && originY === 0) return guides
+  return guides.map((g) =>
+    g.axis === 'x'
+      ? { axis: 'x', pos: g.pos + originX, start: g.start + originY, end: g.end + originY }
+      : { axis: 'y', pos: g.pos + originY, start: g.start + originX, end: g.end + originX },
+  )
+}
+
 function dedupeGuides(gs: Guide[]): Guide[] {
   const seen = new Map<string, Guide>()
   for (const g of gs) {

@@ -4,7 +4,8 @@ import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
-import { paddingValue, radiusValue } from '../composables/styleHelpers'
+import { paddingValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import { fontStack } from '../composables/fontFamilies'
 import type { CmsElement } from '../types'
 
@@ -36,7 +37,7 @@ const boxStyle = computed<CSSProperties>(() => {
     width: '100%',
     height: '100%',
     backgroundColor: s.backgroundColor,
-    borderRadius: radiusValue(s.borderRadius),
+    borderRadius: borderRadiusCss(s.borderRadius),
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
     opacity: s.opacity,
     display: 'flex',

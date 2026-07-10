@@ -162,7 +162,7 @@ function onKey(e: KeyboardEvent): void {
 </script>
 
 <template>
-  <div :class="['cb-root', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]">
+  <div :class="['cb-root cb-root-var', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]">
     <Toolbar v-if="!cms.state.preview || !cms.state.previewFullscreen" />
     <div class="main-area">
       <template v-if="cms.state.preview">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
-import { radiusValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -21,7 +21,7 @@ const wrapStyle = computed<CSSProperties>(() => ({
   color: props.element.styles.color || '#222222',
   opacity: props.element.styles.opacity ?? 1,
   backgroundColor: props.element.styles.backgroundColor || 'transparent',
-  borderRadius: radiusValue(props.element.styles.borderRadius),
+  borderRadius: borderRadiusCss(props.element.styles.borderRadius),
   border: props.element.styles.borderWidth
     ? `${props.element.styles.borderWidth}px solid ${props.element.styles.borderColor}`
     : 'none',

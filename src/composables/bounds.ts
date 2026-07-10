@@ -37,7 +37,7 @@ export function clampSize(
 export function maxElementBottom(elements: CmsElement[]): number {
   let m = 0
   for (const e of elements) {
-    if (!e.visible) continue
+    if (!e.visible || e.parentId) continue
     const b = e.y + e.height
     if (b > m) m = b
   }

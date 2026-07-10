@@ -4,7 +4,8 @@ import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
-import { paddingValue, radiusValue } from '../composables/styleHelpers'
+import { paddingValue } from '../composables/styleHelpers'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import { fontStack } from '../composables/fontFamilies'
 import type { CmsElement } from '../types'
 
@@ -13,6 +14,7 @@ const cms = useCms()
 const editorRef = ref<HTMLElement | null>(null)
 const viewRef = ref<HTMLElement | null>(null)
 const measureRef = ref<HTMLElement | null>(null)
+
 
 useAutoSize(
   toRef(props, 'element'),
@@ -30,6 +32,31 @@ useAutoSize(
     props.isEditing,
   ],
 )
+
+watch(
+  () => [
+    props.element.growHeight,
+    props.element.content,
+    props.element.styles.fontSize,
+    props.element.styles.lineHeight,
+    props.element.styles.padding,
+    props.element.styles.fontWeight,
+    props.element.styles.letterSpacing,
+    props.element.styles.listType,
+  ],
+  () => {
+    const el = props.element
+    if (!el.growHeight) return
+    nextTick(() => {
+      const node = measureRef.value
+      if (!node) return
+      const h = Math.min(Math.max(8, node.scrollHeight), cms.state.canvasHeight)
+      if (h !== el.height) cms.updateElement(el.id, { height: h }, { noHistory: true })
+    })
+  },
+  { immediate: true },
+)
+
 
 const listType = computed(() => props.element.styles.listType || 'none')
 const lines = computed(() => (props.element.content || '').split('\n'))
@@ -49,7 +76,7 @@ const baseStyle = computed<CSSProperties>(() => {
     textAlign: s.textAlign,
     lineHeight: s.lineHeight,
     letterSpacing: s.letterSpacing + 'px',
-    borderRadius: radiusValue(s.borderRadius),
+    borderRadius: borderRadiusCss(s.borderRadius),
     overflow: props.isEditing ? 'visible' : 'hidden',
     wordWrap: 'break-word',
     outline: 'none',
@@ -308,7 +335,7 @@ function onPaste(e: ClipboardEvent): void {
       {{ element.content }}
     </div>
 
-    <!-- Off-screen content clone for natural-height measurement -->
+<!-- Off-screen content clone for natural-height measurement -->
     <ul
       v-if="listType === 'bullet'"
       ref="measureRef"

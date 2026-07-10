@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { clampPos, clampSize } from './bounds'
+import type { CmsElement } from '../types'
+import { clampPos, clampSize, maxElementBottom } from './bounds'
 
 describe('clampPos', () => {
   it('keeps position within canvas bounds', () => {
@@ -25,5 +26,15 @@ describe('clampSize', () => {
       width: 200,
       height: 200,
     })
+  })
+})
+
+describe('maxElementBottom', () => {
+  it('ignores nested children — their y is frame-local, not canvas-comparable', () => {
+    const elements = [
+      { id: 'root', parentId: null, x: 0, y: 0, width: 10, height: 50, visible: true } as CmsElement,
+      { id: 'child', parentId: 'frame-1', x: 0, y: 900, width: 10, height: 20, visible: true } as CmsElement,
+    ]
+    expect(maxElementBottom(elements)).toBe(50)
   })
 })

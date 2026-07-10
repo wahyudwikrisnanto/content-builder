@@ -31,12 +31,13 @@ export type ObjectFit = 'cover' | 'contain' | 'fill'
 export type LayoutDirection = 'none' | 'vertical' | 'horizontal'
 export type LayoutAlign = 'start' | 'center' | 'end' | 'stretch'
 
-export interface BorderRadiusCorners {
+export interface BorderRadiusOptions {
   borderTopLeftRadius?: number
   borderTopRightRadius?: number
   borderBottomLeftRadius?: number
   borderBottomRightRadius?: number
 }
+
 export interface ElementStyles {
   fontSize?: number
   fontFamily?: string
@@ -48,7 +49,7 @@ export interface ElementStyles {
   textAlign?: TextAlign
   lineHeight?: number
   letterSpacing?: number
-  borderRadius?: number | BorderRadiusCorners
+  borderRadius?: number | BorderRadiusOptions
   padding?: number
   paddingTop?: number
   paddingRight?: number
@@ -84,6 +85,7 @@ export interface CmsElement {
   copyEnabled?: boolean
   responsive?: boolean
   clipContent?: boolean
+  advancedBorderRadius?: boolean
   // Auto-layout (frames only). direction 'none' = free positioning
   layoutDirection?: LayoutDirection
   layoutGap?: number
@@ -92,6 +94,8 @@ export interface CmsElement {
   layoutGrow?: boolean
   /** User manually resized height — auto-size stops shrinking below this. */
   manualHeight?: boolean
+  /** Grow element height to fit content. */
+  growHeight?: boolean
   // input element fields
   inputType?: InputType
   placeholder?: string

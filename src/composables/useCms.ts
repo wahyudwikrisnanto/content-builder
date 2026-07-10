@@ -50,6 +50,18 @@ function collectDescendantIds(parentId: string, elements: CmsElement[]): string[
   return out
 }
 
+function absolutePosition(el: CmsElement): { x: number; y: number } {
+  let x = 0,
+    y = 0
+  let cur: CmsElement | undefined = el
+  while (cur) {
+    x += cur.x
+    y += cur.y
+    cur = cur.parentId ? state.elements.find((e) => e.id === cur!.parentId) : undefined
+  }
+  return { x, y }
+}
+
 /**
  * Return the containing box for `el` — parent frame's padding zone, or canvas bounds.
  */
@@ -75,8 +87,8 @@ function framePaddingBox(frame: CmsElement): {
 } {
   const p = sidePad(frame)
   return {
-    x: frame.x + p.l,
-    y: frame.y + p.t,
+    x: p.l,
+    y: p.t,
     width: Math.max(0, frame.width - p.l - p.r),
     height: Math.max(0, frame.height - p.t - p.b),
   }
@@ -140,98 +152,116 @@ function estimatedChildHeight(el: CmsElement): number {
 function reflowFrame(frameId: string, opts: { skipGrow?: boolean } = {}): void {
   const i = state.elements.findIndex((e) => e.id === frameId)
   if (i < 0) return
+
   const frame = state.elements[i]
   if (frame.type !== 'frame') return
+
   const dir = frame.layoutDirection ?? 'none'
   if (dir === 'none') return
+
   const gap = frame.layoutGap ?? 8
   const align = frame.layoutAlign ?? 'start'
   const pad = sidePad(frame)
 
-  // Order children by their position in state.elements (the same ordering moveLayer/moveUp/
-  // moveDown maintain) rather than by current x/y. x/y are themselves last set by this very
-  // function, and estimated vs. later-measured text heights (or drag rounding) can nudge two
-  // siblings' coordinates close enough to flip a coordinate-based sort — silently reordering
-  // the stack on an unrelated edit instead of only when the user actually reorders them.
   const order = new Map(state.elements.map((e, idx) => [e.id, idx]))
   const children = state.elements
     .filter((e) => e.parentId === frameId)
     .sort((a, b) => order.get(a.id)! - order.get(b.id)!)
 
-  let cursor = dir === 'vertical' ? frame.y + pad.t : frame.x + pad.l
+  let cursor = dir === 'vertical' ? pad.t : pad.l
   const nextElements = [...state.elements]
 
   for (const child of children) {
     const idx = nextElements.findIndex((e) => e.id === child.id)
     if (idx < 0) continue
+
     let x: number, y: number
-    let w = child.width,
-      h = child.height
+    let w = child.width
+    let h = child.height
 
     if (dir === 'vertical') {
       y = cursor
+
       if (align === 'stretch') {
-        x = frame.x + pad.l
+        x = pad.l
         w = Math.max(1, frame.width - pad.l - pad.r)
       } else if (align === 'center') {
-        x = frame.x + (frame.width - w) / 2
+        x = (frame.width - w) / 2
       } else if (align === 'end') {
-        x = frame.x + frame.width - pad.r - w
+        x = frame.width - pad.r - w
       } else {
-        x = frame.x + pad.l
+        x = pad.l
       }
+
       cursor = y + estimatedChildHeight(child) + gap
     } else {
       x = cursor
+
       if (align === 'stretch') {
-        y = frame.y + pad.t
+        y = pad.t
         h = Math.max(1, frame.height - pad.t - pad.b)
       } else if (align === 'center') {
-        y = frame.y + (frame.height - h) / 2
+        y = (frame.height - h) / 2
       } else if (align === 'end') {
-        y = frame.y + frame.height - pad.b - h
+        y = frame.height - pad.b - h
       } else {
-        y = frame.y + pad.t
+        y = pad.t
       }
+
       cursor = x + w + gap
     }
+
     nextElements[idx] = { ...child, x, y, width: w, height: h }
   }
 
-  // Grow the frame to fit its laid-out children
   if (frame.layoutGrow && !opts.skipGrow && children.length) {
-    // cursor now sits at the trailing edge (with gap). Content-end = cursor - gap.
     const contentEnd = cursor - gap
-    let newW: number, newH: number
+
+    let newW: number
+    let newH: number
+
     if (dir === 'vertical') {
-      newH = Math.max(1, contentEnd - frame.y + pad.b)
-      // Cross axis: fit the widest child
+      newH = Math.max(1, contentEnd + pad.b)
+
       const rightMost = Math.max(
         ...children.map((c) => {
           const cur = nextElements.find((n) => n.id === c.id)!
           return cur.x + cur.width
         }),
       )
-      newW = Math.max(1, rightMost - frame.x + pad.r)
+
+      newW = Math.max(1, rightMost + pad.r)
     } else {
-      newW = Math.max(1, contentEnd - frame.x + pad.r)
+      newW = Math.max(1, contentEnd + pad.r)
+
       const bottomMost = Math.max(
         ...children.map((c) => {
           const cur = nextElements.find((n) => n.id === c.id)!
           return cur.y + cur.height
         }),
       )
-      newH = Math.max(1, bottomMost - frame.y + pad.b)
+
+      newH = Math.max(1, bottomMost + pad.b)
     }
+
     const fIdx = nextElements.findIndex((e) => e.id === frameId)
     if (fIdx >= 0 && (nextElements[fIdx].width !== newW || nextElements[fIdx].height !== newH)) {
-      nextElements[fIdx] = { ...nextElements[fIdx], width: newW, height: newH }
+      nextElements[fIdx] = {
+        ...nextElements[fIdx],
+        width: newW,
+        height: newH,
+      }
     }
   }
 
   state.elements = nextElements
-}
 
+  // Reflow parent frame if this frame is nested.
+  const updatedFrame = state.elements.find((e) => e.id === frameId)
+  if (updatedFrame?.parentId) {
+    reflowFrame(updatedFrame.parentId, opts)
+  }
+}
 /**
  * Persist a drag-reorder within an auto-layout frame: reflowFrame sorts children by their
  * position in state.elements (see reflowFrame), so dragging one past a sibling only changes
@@ -290,12 +320,28 @@ function reorderAutoLayoutChildren(frameId: string, draggedId?: string): void {
 const actions = {
   reflowFrame,
   reorderAutoLayoutChildren,
+  absolutePosition,
   /** Returns parent frame's inner padding box, or null if element has no frame parent. */
   parentInnerBox(el: CmsElement): { x: number; y: number; width: number; height: number } | null {
     if (!el.parentId) return null
     const parent = state.elements.find((e) => e.id === el.parentId)
     if (!parent || parent.type !== 'frame') return null
     return framePaddingBox(parent)
+  },
+  /** Coordinate-space container for drag/resize snapping: parent frame (if any), its dimensions, and its canvas-absolute origin. */
+  snapContainerFor(el: CmsElement): {
+    parentFrame: CmsElement | undefined
+    containerWidth: number
+    containerHeight: number
+    origin: { x: number; y: number }
+  } {
+    const parentFrame = el.parentId ? state.elements.find((e) => e.id === el.parentId) : undefined
+    return {
+      parentFrame,
+      containerWidth: parentFrame ? parentFrame.width : state.canvasWidth,
+      containerHeight: parentFrame ? parentFrame.height : effectiveHeight.value,
+      origin: parentFrame ? absolutePosition(parentFrame) : { x: 0, y: 0 },
+    }
   },
   addElement(element: CmsElement): void {
     snapshot()
@@ -343,7 +389,10 @@ const actions = {
     if (next.type === 'frame' && layoutKeys.some((k) => k in updates)) {
       reflowFrame(next.id, { skipGrow: isSizeEdit })
     }
-    if (next.parentId) reflowFrame(next.parentId)
+
+    if (next.parentId) {
+      reflowFrame(next.parentId)
+    }
   },
   updateStyles(
     id: string,
@@ -414,8 +463,6 @@ const actions = {
   },
   setEditing(id: string | null): void {
     state.editingTextId = id
-    if (id) state.sidebarHidden = true
-    else state.sidebarHidden = false
   },
   toggleSidebar(): void {
     state.sidebarHidden = !state.sidebarHidden
@@ -452,7 +499,6 @@ const actions = {
   /**
    * Set positions of many elements from absolute (originalX + dx, originalY + dy).
    * `originals` maps id → starting position captured at drag start.
-   * Descendants of frames in the id list are moved automatically.
    * Delta is clamped so the group's bounding box stays on-canvas.
    */
   moveMany(
@@ -463,11 +509,19 @@ const actions = {
     opts: { skipParentClamp?: boolean } = {},
   ): void {
     if (!ids.length) return
-    const ownership = new Set<string>()
-    for (const id of ids) {
-      ownership.add(id)
-      for (const d of collectDescendantIds(id, state.elements)) ownership.add(d)
+    const idSet = new Set(ids)
+    // Exclude any id whose nearest selected ancestor is itself already being moved — its
+    // coordinate is frame-relative, so it moves for free when that ancestor moves, and
+    // applying the same delta to it directly would double-shift it.
+    const isCarriedByAnotherSelected = (id: string): boolean => {
+      let cur = state.elements.find((e) => e.id === id)
+      while (cur?.parentId) {
+        if (idSet.has(cur.parentId)) return true
+        cur = state.elements.find((e) => e.id === cur!.parentId)
+      }
+      return false
     }
+    const ownership = new Set<string>(ids.filter((id) => !isCarriedByAnotherSelected(id)))
     // Compute the group's original bounding box from originals + current sizes
     let minX = Infinity,
       minY = Infinity,
@@ -619,15 +673,17 @@ const actions = {
     const el = state.elements[i]
     // descendants includes id itself so a frame can't be nested in its own subtree
     const descendants = new Set([id, ...collectDescendantIds(id, state.elements)])
-    const cx = el.x + el.width / 2
-    const cy = el.y + el.height / 2
+    const absEl = absolutePosition(el)
+    const cx = absEl.x + el.width / 2
+    const cy = absEl.y + el.height / 2
     let target: string | null = null
     // For nested frames: pick the smallest containing frame (deepest fit)
     let bestArea = Infinity
     for (const f of state.elements) {
       if (f.type !== 'frame') continue
       if (descendants.has(f.id)) continue
-      if (cx < f.x || cx > f.x + f.width || cy < f.y || cy > f.y + f.height) continue
+      const absF = absolutePosition(f)
+      if (cx < absF.x || cx > absF.x + f.width || cy < absF.y || cy > absF.y + f.height) continue
       const area = f.width * f.height
       if (area < bestArea) {
         bestArea = area
@@ -636,7 +692,14 @@ const actions = {
     }
     const prevParent = el.parentId
     if (el.parentId !== target) {
-      const updated = { ...el, parentId: target }
+      const targetFrame = target ? state.elements.find((e) => e.id === target) : undefined
+      const newOrigin = targetFrame ? absolutePosition(targetFrame) : { x: 0, y: 0 }
+      const updated = {
+        ...el,
+        parentId: target,
+        x: absEl.x - newOrigin.x,
+        y: absEl.y - newOrigin.y,
+      }
       state.elements = [...state.elements.filter((e) => e.id !== id), updated]
       // Only reflow here when the parent actually changed (close the old parent's gap, slot
       // into the new one). Reflowing unconditionally — even for a same-frame drag — snaps the
@@ -704,17 +767,68 @@ const actions = {
     if (el.parentId) reflowFrame(el.parentId)
   },
   duplicate(id: string): void {
-    const el = state.elements.find((e) => e.id === id)
-    if (!el) return
+    const root = state.elements.find((e) => e.id === id)
+    if (!root) return
+
     snapshot()
-    const dup: CmsElement = { ...cloneEl(el), id: cmsUid(), x: el.x + 20, y: el.y + 20 }
-    const sized = clampSize(dup, state.canvasWidth, state.canvasHeight, state.flexibleHeight)
-    Object.assign(dup, sized)
-    state.elements.push(dup)
-    // Auto-layout siblings are positioned by reflowFrame, not the raw +20/+20 offset above —
-    // without this the duplicate floats at that offset until an unrelated edit forces a reflow.
-    if (dup.parentId) reflowFrame(dup.parentId)
-    state.selectedId = dup.id
+
+    // Get root + all descendants
+    const originals: CmsElement[] = []
+
+    const collect = (parentId: string) => {
+      const children = state.elements.filter((e) => e.parentId === parentId)
+      for (const child of children) {
+        originals.push(child)
+        collect(child.id)
+      }
+    }
+
+    originals.push(root)
+    collect(root.id)
+
+    // old id -> new id
+    const idMap = new Map<string, string>()
+
+    for (const el of originals) {
+      idMap.set(el.id, cmsUid())
+    }
+
+    const clones = originals.map((el) => {
+      const clone = cloneEl(el)
+
+      clone.id = idMap.get(el.id)!
+
+      if (el.parentId && idMap.has(el.parentId)) {
+        // Parent is also duplicated
+        clone.parentId = idMap.get(el.parentId)!
+      } else {
+        // Keep original parent
+        clone.parentId = el.parentId
+      }
+
+      // Offset only the duplicated root
+      if (el.id === root.id) {
+        clone.x += 20
+        clone.y += 20
+
+        Object.assign(
+          clone,
+          clampSize(clone, state.canvasWidth, state.canvasHeight, state.flexibleHeight),
+        )
+      }
+
+      return clone
+    })
+
+    state.elements.push(...clones)
+
+    const duplicatedRoot = clones[0]
+
+    if (duplicatedRoot.parentId) {
+      reflowFrame(duplicatedRoot.parentId)
+    }
+
+    state.selectedId = duplicatedRoot.id
   },
   toggleVisible(id: string): void {
     const i = findIdx(id)
@@ -827,6 +941,25 @@ const actions = {
   toggleFlexibleHeight(): void {
     state.flexibleHeight = !state.flexibleHeight
   },
+  toggleAdvancedBorderRadius(id: string): void {
+    const i = findIdx(id)
+    if (i < 0) return
+
+    const target = state.elements[i]
+    target.advancedBorderRadius = !target.advancedBorderRadius
+
+    if (!target.advancedBorderRadius) {
+      target.styles.borderRadius = 0
+      return
+    }
+
+    target.styles.borderRadius = {
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+    }
+  },
   togglePreview(): void {
     state.preview = !state.preview
     if (state.preview) {
@@ -842,7 +975,7 @@ const actions = {
   },
   exportJson(): string {
     const payload = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       canvas: {
         width: state.canvasWidth,

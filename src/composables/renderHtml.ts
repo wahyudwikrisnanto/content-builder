@@ -1,9 +1,12 @@
 import hljs from 'highlight.js/lib/common'
 import type { CmsElement, ElementStyles } from '../types'
+import { borderRadiusCss } from './useBorderRadius'
+
+export type CmsRenderElement = CmsElement
 
 export interface RenderPayload {
   canvas: { width: number; height: number; flexibleHeight?: boolean }
-  elements: CmsElement[]
+  elements: CmsRenderElement[]
 }
 
 const escape = (s: string): string =>
@@ -14,19 +17,6 @@ const escape = (s: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-function rad(v: ElementStyles['borderRadius'], fallback = 0): string {
-  if (v == null) return `${fallback}px`
-  if (typeof v === 'number') return `${v}px`
-  const tl = v.borderTopLeftRadius ?? 0
-  const tr = v.borderTopRightRadius ?? 0
-  const br = v.borderBottomRightRadius ?? 0
-  const bl = v.borderBottomLeftRadius ?? 0
-  return `${tl}px ${tr}px ${br}px ${bl}px`
-}
-
-// Set by renderHtml before iterating so per-element renderers can look up parents
-let _elementsById: Map<string, CmsElement> = new Map()
-
 // Text elements report height:0 until useAutoSize's ResizeObserver measures the mounted
 // DOM node (see useAutoSize.ts) — legit for elements never mounted (e.g. hand-authored or
 // freshly-created JSON). Treating that 0 literally makes an absolutely-positioned box with
@@ -35,49 +25,21 @@ let _elementsById: Map<string, CmsElement> = new Map()
 // since clip-path (unlike plain overflow) doesn't defer to the box's visual/painted bounds.
 // Estimate the real height the same way importCKEditor.ts does so both the box itself and
 // any ancestor clip-path use a size that matches what's actually painted.
-function estimatedHeight(el: CmsElement): number {
+function estimatedHeight(el: CmsRenderElement): number {
   if (el.height > 0 || el.type !== 'text') return el.height
   const s = el.styles
   const lines = Math.max(1, (el.content || '').split('\n').length)
   return Math.ceil((s.fontSize ?? 16) * (s.lineHeight ?? 1.5) * lines + (s.padding ?? 0) * 2)
 }
 
-function computeClipInset(el: CmsElement): string {
-  // Intersect the bounds of every ancestor frame with clipContent enabled
-  let minX = -Infinity,
-    minY = -Infinity,
-    maxX = Infinity,
-    maxY = Infinity
-  let has = false
-  let cur: CmsElement | undefined = _elementsById.get(el.parentId ?? '')
-  while (cur) {
-    if (cur.type === 'frame' && cur.clipContent) {
-      has = true
-      if (cur.x > minX) minX = cur.x
-      if (cur.y > minY) minY = cur.y
-      if (cur.x + cur.width < maxX) maxX = cur.x + cur.width
-      if (cur.y + estimatedHeight(cur) < maxY) maxY = cur.y + estimatedHeight(cur)
-    }
-    cur = _elementsById.get(cur.parentId ?? '')
-  }
-  if (!has) return ''
-  const h = estimatedHeight(el)
-  const top = Math.max(0, minY - el.y)
-  const left = Math.max(0, minX - el.x)
-  const right = Math.max(0, el.x + el.width - maxX)
-  const bottom = Math.max(0, el.y + h - maxY)
-  return `clip-path:inset(${top}px ${right}px ${bottom}px ${left}px)`
-}
-
 // Debug attrs shown on every rendered outer div — inspect in devtools
-function dbg(el: CmsElement): string {
+function dbg(el: CmsRenderElement): string {
   return `data-cms-type="${el.type}" data-cms-id="${el.id}"${el.name ? ` data-cms-name="${escape(el.name)}"` : ''}`
 }
 
-function commonBoxStyle(el: CmsElement): string {
+function commonBoxStyle(el: CmsRenderElement): string {
   const s = el.styles
   const opacity = s.opacity != null ? s.opacity : 1
-  const clip = computeClipInset(el)
   return [
     `position:absolute`,
     `left:${el.x}px`,
@@ -85,7 +47,6 @@ function commonBoxStyle(el: CmsElement): string {
     `width:${el.width}px`,
     `height:${estimatedHeight(el)}px`,
     `opacity:${opacity}`,
-    clip,
   ]
     .filter(Boolean)
     .join(';')
@@ -126,7 +87,7 @@ function textCss(s: ElementStyles, extra: Record<string, string> = {}): string {
 function boxCss(s: ElementStyles): string {
   const parts: string[] = []
   if (s.backgroundColor) parts.push(`background-color:${s.backgroundColor}`)
-  if (s.borderRadius != null) parts.push(`border-radius:${rad(s.borderRadius)}`)
+  if (s.borderRadius != null) parts.push(`border-radius:${borderRadiusCss(s.borderRadius)}`)
   if (s.borderWidth) parts.push(`border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}`)
   return parts.join(';')
 }
@@ -141,7 +102,7 @@ function renderListBody(content: string, listType: string): string {
   return ''
 }
 
-function renderText(el: CmsElement): string {
+function renderText(el: CmsRenderElement): string {
   const s = el.styles
   const listType = s.listType || 'none'
   const inner =
@@ -155,20 +116,20 @@ function renderText(el: CmsElement): string {
     'word-wrap': 'break-word',
     'background-color':
       s.backgroundColor === 'transparent' ? 'transparent' : s.backgroundColor || 'transparent',
-    'border-radius': rad(s.borderRadius),
+    'border-radius': borderRadiusCss(s.borderRadius),
     'font-family': 'inherit',
   })
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${style}">${inner}</div></div>`
 }
 
-function renderImage(el: CmsElement): string {
+function renderImage(el: CmsRenderElement): string {
   const s = el.styles
   const src = el.content?.startsWith('data:') ? '' : el.content
   if (!src) return `<div ${dbg(el)} style="${commonBoxStyle(el)};${boxCss(s)}"></div>`
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${rad(s.borderRadius)}"/></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><img src="${escape(src)}" alt="" style="width:100%;height:100%;display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${borderRadiusCss(s.borderRadius)}"/></div>`
 }
 
-function renderShape(el: CmsElement): string {
+function renderShape(el: CmsRenderElement): string {
   const s = el.styles
   const listType = s.listType || 'none'
   const justify =
@@ -181,36 +142,36 @@ function renderShape(el: CmsElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${box}">${textInner}</div></div>`
 }
 
-function renderVideo(el: CmsElement): string {
+function renderVideo(el: CmsRenderElement): string {
   const s = el.styles
   if (!el.content) {
-    return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background:#18181B;border-radius:${rad(s.borderRadius)}"></div></div>`
+    return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background:#18181B;border-radius:${borderRadiusCss(s.borderRadius)}"></div></div>`
   }
   let src = el.content
   if (src.includes('youtube.com/watch')) src = src.replace('watch?v=', 'embed/')
   if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/')
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${rad(s.borderRadius)}"></iframe></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${borderRadiusCss(s.borderRadius)}"></iframe></div>`
 }
 
-function renderDivider(el: CmsElement): string {
+function renderDivider(el: CmsRenderElement): string {
   const s = el.styles
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#DDD'};border-radius:${rad(s.borderRadius)};opacity:${s.opacity ?? 1}"></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;background-color:${s.backgroundColor || '#DDD'};border-radius:${borderRadiusCss(s.borderRadius)};opacity:${s.opacity ?? 1}"></div></div>`
 }
 
-function renderContainer(el: CmsElement): string {
+function renderContainer(el: CmsRenderElement): string {
   const s = el.styles
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="width:100%;height:100%;${boxCss(s)}"></div></div>`
 }
 
-function renderFrame(el: CmsElement): string {
+function renderFrame(el: CmsRenderElement, childRender?: string): string {
   const s = el.styles
   const clip = el.clipContent ? 'overflow:hidden;' : ''
   const bw = s.borderWidth ?? 0
   const border = bw > 0 ? `border:${bw}px solid ${s.borderColor || '#D4D4D4'};` : ''
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${rad(s.borderRadius)};${border}"></div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${borderRadiusCss(s.borderRadius)};${border}">${childRender ?? ''}</div></div>`
 }
 
-function renderButton(el: CmsElement): string {
+function renderButton(el: CmsRenderElement): string {
   const s = el.styles
   const justify =
     s.textAlign === 'left' ? 'flex-start' : s.textAlign === 'right' ? 'flex-end' : 'center'
@@ -224,7 +185,7 @@ function renderButton(el: CmsElement): string {
     `background-color:${s.backgroundColor || '#2563EB'}`,
     `color:${s.color || '#FFF'}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#1E40AF'}` : 'border:none',
-    `border-radius:${rad(s.borderRadius, 8)}`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 8)}`,
     `opacity:${s.opacity ?? 1}`,
     `font-size:${s.fontSize ?? 14}px`,
     s.fontWeight ? `font-weight:${s.fontWeight}` : '',
@@ -246,7 +207,7 @@ function renderButton(el: CmsElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${baseStyle}">${label}</div></div>`
 }
 
-function renderCode(el: CmsElement): string {
+function renderCode(el: CmsRenderElement): string {
   const s = el.styles
   const langRaw = (el.language || 'plaintext').toLowerCase()
   const lang = hljs.getLanguage(langRaw) ? langRaw : 'plaintext'
@@ -264,7 +225,7 @@ function renderCode(el: CmsElement): string {
     'width:100%',
     'height:100%',
     `background-color:${s.backgroundColor || '#282C34'}`,
-    `border-radius:${rad(s.borderRadius)}`,
+    `border-radius:${borderRadiusCss(s.borderRadius)}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#3A3A4A'}` : '',
     `opacity:${s.opacity ?? 1}`,
     'overflow:hidden',
@@ -296,7 +257,7 @@ function renderCode(el: CmsElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
 }
 
-function renderInput(el: CmsElement): string {
+function renderInput(el: CmsRenderElement): string {
   const s = el.styles
   const t = el.inputType || 'text'
   const labelHtml = el.inputLabel
@@ -309,7 +270,7 @@ function renderInput(el: CmsElement): string {
     `color:${s.color || '#222'}`,
     `background-color:${s.backgroundColor || '#fff'}`,
     `border:${s.borderWidth ?? 1}px solid ${s.borderColor || '#D1D5DB'}`,
-    `border-radius:${rad(s.borderRadius, 6)}`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 6)}`,
     `padding:${s.padding ?? 10}px`,
     `opacity:${s.opacity ?? 1}`,
     'box-sizing:border-box',
@@ -350,7 +311,16 @@ function renderInput(el: CmsElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
 }
 
-const RENDERERS: Record<string, (el: CmsElement) => string> = {
+function renderIcon(el: CmsRenderElement): string {
+  const s = el.styles
+  const name = el.content || 'lucide:star'
+  // Iconify SVG via public API — works in static HTML export
+  const [prefix, ...rest] = name.split(':')
+  const iconId = rest.join(':')
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)};display:flex;align-items:center;justify-content:center;color:${s.color || 'currentColor'};opacity:${s.opacity ?? 1}"><img src="https://api.iconify.design/${prefix}/${iconId}.svg?color=${encodeURIComponent(s.color || '#222222')}" style="width:100%;height:100%" alt="${escape(name)}" /></div>`
+}
+
+const RENDERERS: Record<string, (el: CmsRenderElement, childRender?: string) => string> = {
   text: renderText,
   image: renderImage,
   shape: renderShape,
@@ -361,6 +331,7 @@ const RENDERERS: Record<string, (el: CmsElement) => string> = {
   button: renderButton,
   code: renderCode,
   input: renderInput,
+  icon: renderIcon,
 }
 
 /**
@@ -371,26 +342,39 @@ export function renderHtml(payload: RenderPayload): string {
   const w = payload.canvas.width
   const h = payload.canvas.height
   const flexH = payload.canvas.flexibleHeight
+  const els = payload.elements
+  const byId = new Map(els.map((e) => [e.id, e]))
+
   const minHeight = flexH
-    ? Math.max(h, ...payload.elements.map((e) => (e.visible ? e.y + e.height : 0)))
+    ? Math.max(
+        h,
+        ...payload.elements.map((e) => (e.visible && !e.parentId ? e.y + e.height : 0)),
+      )
     : h
 
-  _elementsById = new Map(payload.elements.map((e) => [e.id, e]))
-
-  const visibility = (el: CmsElement): boolean => {
-    let cur: CmsElement | undefined = el
+  const isVisible = (el: CmsRenderElement): boolean => {
+    let cur: CmsRenderElement | undefined = el
     while (cur) {
       if (!cur.visible) return false
       if (!cur.parentId) return true
-      cur = _elementsById.get(cur.parentId)
+      cur = byId.get(cur.parentId)
     }
     return true
   }
 
-  const body = payload.elements
-    .filter(visibility)
-    .map((el) => RENDERERS[el.type]?.(el) ?? '')
-    .join('\n')
+  const childrenOf = (pid: string | null): CmsRenderElement[] =>
+    els.filter((e) => (e.parentId ?? null) === pid && isVisible(e)).sort((a, b) => a.y - b.y || a.x - b.x)
+
+  const renderNode = (el: CmsRenderElement) => {
+    const childrenHtml: string = childrenOf(el.id).map(renderNode).join('')
+    return RENDERERS[el.type]?.(el, childrenHtml) ?? ''
+  }
+
+  let body = ''
+  const roots = childrenOf(null)
+  for (const element of roots) {
+    body += renderNode(element)
+  }
 
   return `<div class="content-render" style="position:relative;width:${w}px;height:${minHeight}px;background:white;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${body}</div>`
 }
@@ -408,7 +392,7 @@ function flowBoxCss(s: ElementStyles): string {
   const parts: string[] = []
   if (s.backgroundColor && s.backgroundColor !== 'transparent')
     parts.push(`background-color:${s.backgroundColor}`)
-  if (s.borderRadius != null) parts.push(`border-radius:${rad(s.borderRadius)}`)
+  if (s.borderRadius != null) parts.push(`border-radius:${borderRadiusCss(s.borderRadius)}`)
   if (s.borderWidth) parts.push(`border:${s.borderWidth}px solid ${s.borderColor || '#DDD'}`)
   return parts.join(';')
 }
@@ -444,7 +428,7 @@ let _autoFlex = 0
 // (see estimatedHeight above) into an oversized margin-top covering the missing height too.
 const flowHeightOf = estimatedHeight
 
-function flowWrap(el: CmsElement, mt: number, canvasW: number): string {
+function flowWrap(el: CmsRenderElement, mt: number, canvasW: number): string {
   const base = [
     mt ? `margin-top:${mt}px` : '',
     `width:${el.width}px`,
@@ -475,7 +459,7 @@ function flowWrap(el: CmsElement, mt: number, canvasW: number): string {
   return base.filter(Boolean).join(';')
 }
 
-function flowRenderText(el: CmsElement, mt: number, cw: number): string {
+function flowRenderText(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const lt = s.listType || 'none'
   const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;font-family:inherit;${flowTextCss(s)}`
@@ -497,14 +481,14 @@ function flowRenderText(el: CmsElement, mt: number, cw: number): string {
   return `<div ${dbg(el)} style="${wrap}"><div style="${inner_css};white-space:pre-wrap">${escape(el.content || '')}</div></div>`
 }
 
-function flowRenderImage(el: CmsElement, mt: number, cw: number): string {
+function flowRenderImage(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   if (!el.content) return ''
   const ar = el.width && el.height ? `aspect-ratio:${el.width}/${el.height}` : ''
-  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:100%;${ar};display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${rad(s.borderRadius)}"/></div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><img src="${escape(el.content)}" alt="" style="width:100%;height:100%;${ar};display:block;object-fit:${s.objectFit || 'cover'};object-position:${s.objectPosition || 'center'};border-radius:${borderRadiusCss(s.borderRadius)}"/></div>`
 }
 
-function flowRenderShape(el: CmsElement, mt: number, cw: number): string {
+function flowRenderShape(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const lt = s.listType || 'none'
   const justify =
@@ -526,21 +510,21 @@ function flowRenderShape(el: CmsElement, mt: number, cw: number): string {
   return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)};${ar};display:flex;align-items:center;justify-content:${justify};overflow:hidden;${flowBoxCss(s)}">${inner}</div>`
 }
 
-function flowRenderVideo(el: CmsElement, mt: number, cw: number): string {
+function flowRenderVideo(el: CmsRenderElement, mt: number, cw: number): string {
   if (!el.content) return ''
   const s = el.styles
   let src = el.content
   if (src.includes('youtube.com/watch')) src = src.replace('watch?v=', 'embed/')
   if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/')
-  return `<div style="${flowWrap(el, mt, cw)};aspect-ratio:16/9"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${rad(s.borderRadius)}"></iframe></div>`
+  return `<div style="${flowWrap(el, mt, cw)};aspect-ratio:16/9"><iframe src="${escape(src)}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:${borderRadiusCss(s.borderRadius)}"></iframe></div>`
 }
 
-function flowRenderDivider(el: CmsElement, mt: number, cw: number): string {
+function flowRenderDivider(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
-  return `<div style="${flowWrap(el, mt, cw)};height:${el.height}px;background-color:${s.backgroundColor || '#DDD'};border-radius:${rad(s.borderRadius)}"></div>`
+  return `<div style="${flowWrap(el, mt, cw)};height:${el.height}px;background-color:${s.backgroundColor || '#DDD'};border-radius:${borderRadiusCss(s.borderRadius)}"></div>`
 }
 
-function flowRenderButton(el: CmsElement, mt: number, cw: number): string {
+function flowRenderButton(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const btnStyle = [
     'display:block',
@@ -549,7 +533,7 @@ function flowRenderButton(el: CmsElement, mt: number, cw: number): string {
     `background-color:${s.backgroundColor || '#2563EB'}`,
     `color:${s.color || '#FFF'}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#1E40AF'}` : 'border:none',
-    `border-radius:${rad(s.borderRadius, 8)}`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 8)}`,
     `font-size:${s.fontSize ?? 14}px`,
     s.fontWeight ? `font-weight:${s.fontWeight}` : '',
     `text-align:${s.textAlign || 'center'}`,
@@ -567,7 +551,7 @@ function flowRenderButton(el: CmsElement, mt: number, cw: number): string {
   return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}">${link}</div>`
 }
 
-function flowRenderCode(el: CmsElement, mt: number, cw: number): string {
+function flowRenderCode(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const langRaw = (el.language || 'plaintext').toLowerCase()
   const lang = hljs.getLanguage(langRaw) ? langRaw : 'plaintext'
@@ -584,7 +568,7 @@ function flowRenderCode(el: CmsElement, mt: number, cw: number): string {
   const boxStyle = [
     `width:100%`,
     `background-color:${s.backgroundColor || '#282C34'}`,
-    `border-radius:${rad(s.borderRadius)}`,
+    `border-radius:${borderRadiusCss(s.borderRadius)}`,
     s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#3A3A4A'}` : '',
     'overflow:hidden',
   ]
@@ -601,7 +585,7 @@ function flowRenderCode(el: CmsElement, mt: number, cw: number): string {
   return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}"><div style="${boxStyle}">${header}<pre style="${preStyle}"><code class="hljs language-${escape(lang)}">${body}</code></pre></div></div>`
 }
 
-function flowRenderInput(el: CmsElement, mt: number, cw: number): string {
+function flowRenderInput(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const t = el.inputType || 'text'
   const labelHtml = el.inputLabel
@@ -614,7 +598,7 @@ function flowRenderInput(el: CmsElement, mt: number, cw: number): string {
     `color:${s.color || '#222'}`,
     `background-color:${s.backgroundColor || '#fff'}`,
     `border:${s.borderWidth ?? 1}px solid ${s.borderColor || '#D1D5DB'}`,
-    `border-radius:${rad(s.borderRadius, 6)}`,
+    `border-radius:${borderRadiusCss(s.borderRadius, 6)}`,
     `padding:${s.padding ?? 10}px`,
     'box-sizing:border-box',
     'outline:none',
@@ -660,8 +644,8 @@ export function renderFlowHtml(payload: RenderPayload): string {
   const els = payload.elements
   const byId = new Map(els.map((e) => [e.id, e]))
 
-  const isVisible = (el: CmsElement): boolean => {
-    let cur: CmsElement | undefined = el
+  const isVisible = (el: CmsRenderElement): boolean => {
+    let cur: CmsRenderElement | undefined = el
     while (cur) {
       if (!cur.visible) return false
       if (!cur.parentId) return true
@@ -670,12 +654,12 @@ export function renderFlowHtml(payload: RenderPayload): string {
     return true
   }
 
-  const childrenOf = (pid: string | null): CmsElement[] =>
+  const childrenOf = (pid: string | null): CmsRenderElement[] =>
     els
       .filter((e) => (e.parentId ?? null) === pid && isVisible(e))
       .sort((a, b) => a.y - b.y || a.x - b.x)
 
-  const renderNode = (el: CmsElement, mt: number, cw: number): string => {
+  const renderNode = (el: CmsRenderElement, mt: number, cw: number): string => {
     if (el.type === 'text') return flowRenderText(el, mt, cw)
     if (el.type === 'image') return flowRenderImage(el, mt, cw)
     if (el.type === 'shape') return flowRenderShape(el, mt, cw)
@@ -697,20 +681,24 @@ export function renderFlowHtml(payload: RenderPayload): string {
       const pb = s.paddingBottom ?? base ?? 0
       const pl = s.paddingLeft ?? base ?? 0
 
-      const boxParts = [
-        flowWrap(el, mt, cw),
+      const background =
         s.backgroundColor && s.backgroundColor !== 'transparent'
           ? `background-color:${s.backgroundColor}`
-          : '',
-        s.borderRadius != null ? `border-radius:${rad(s.borderRadius)}` : '',
-        s.borderWidth ? `border:${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}` : '',
-        pt || pr || pb || pl ? `padding:${pt}px ${pr}px ${pb}px ${pl}px` : '',
-        clip
-          ? `height:${el.height}px;overflow:hidden`
-          : el.type === 'frame' && el.manualHeight
-            ? `height:${el.height}px`
-            : '',
-      ]
+          : ''
+      const borderRadius = s.borderRadius != null ? `border-radius:${borderRadiusCss(s.borderRadius)}` : ''
+      const border = s.borderWidth
+        ? `border:${s.borderWidth}px solid ${s.borderColor || '#D4D4D4'}`
+        : ''
+      const padding = pt || pr || pb || pl ? `padding:${pt}px ${pr}px ${pb}px ${pl}px` : ''
+      const heightStyle = (() => {
+        if (el.layoutGrow) return 'height:auto'
+        if (clip) return `height:${el.height}px;overflow:hidden`
+        if (el.type === 'frame' && el.manualHeight) {
+          return `height:${el.height}px`
+        }
+        return ''
+      })()
+      const boxParts = [flowWrap(el, mt, cw), background, borderRadius, border, padding, heightStyle]
 
       const children = childrenOf(el.id)
       const innerW = Math.max(0, el.width - pl - pr)
@@ -741,7 +729,7 @@ export function renderFlowHtml(payload: RenderPayload): string {
         try {
           for (const child of children) {
             const relEl = { ...child, x: 0, y: 0 }
-            parts.push(renderNode(relEl as CmsElement, 0, innerW))
+            parts.push(renderNode(relEl as CmsRenderElement, 0, innerW))
           }
         } finally {
           _autoFlex--
@@ -760,24 +748,21 @@ export function renderFlowHtml(payload: RenderPayload): string {
         const sorted = [...children].sort((a, b) => a.y - b.y)
         let prevBottom = -1
         for (const child of sorted) {
-          const relY = child.y - el.y - pt // 0-based within padding zone
-          const relX = child.x - el.x - pl
-          const relEl = { ...child, x: relX, y: relY }
-          const gap = prevBottom < 0 ? 0 : Math.max(0, relY - prevBottom)
+          const gap = prevBottom < 0 ? 0 : Math.max(0, child.y - prevBottom)
           // We're inside flex column, so alignment via margin-left auto:
-          const rightGap = innerW - relX - child.width
+          const rightGap = innerW - child.x - child.width
           const alignCss = (() => {
             const tol = Math.max(2, innerW * 0.005)
-            if (Math.abs(relX - rightGap) <= tol) return 'align-self:center'
-            if (rightGap < relX)
+            if (Math.abs(child.x - rightGap) <= tol) return 'align-self:center'
+            if (rightGap < child.x)
               return `align-self:flex-end;margin-right:${Math.max(0, rightGap)}px`
-            return `align-self:flex-start;margin-left:${Math.max(0, relX)}px`
+            return `align-self:flex-start;margin-left:${Math.max(0, child.x)}px`
           })()
-          const inner = renderNode(relEl as CmsElement, 0, innerW)
+          const inner = renderNode(child, 0, innerW)
           parts.push(
             `<div style="${gap ? `margin-top:${gap}px;` : ''}${alignCss};max-width:100%">${inner}</div>`,
           )
-          prevBottom = relY + flowHeightOf(child)
+          prevBottom = child.y + flowHeightOf(child)
         }
       } finally {
         _autoFlex--
@@ -799,39 +784,4 @@ export function renderFlowHtml(payload: RenderPayload): string {
 
   // `display:flow-root` establishes a BFC — prevents child margins from collapsing into this container
   return `<div class="content-render-flow" style="display:flow-root;position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
-}
-
-export function bindCopyButtons(root: HTMLElement): () => void {
-  const onClick = (e: Event): void => {
-    const btn = (e.target as HTMLElement).closest('[data-code-copy]') as HTMLElement | null
-    if (!btn) return
-    e.stopPropagation()
-    const wrapper = btn.closest('div')?.parentElement
-    const pre = wrapper?.querySelector('pre')
-    const text = pre ? (pre as HTMLElement).innerText : ''
-    const done = (): void => {
-      btn.textContent = 'Copied'
-      btn.style.color = '#28C840'
-      setTimeout(() => {
-        btn.textContent = 'Copy'
-        btn.style.color = 'rgba(255,255,255,0.55)'
-      }, 1500)
-    }
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(done)
-    else {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
-      document.body.appendChild(ta)
-      ta.select()
-      try {
-        document.execCommand('copy')
-      } catch {}
-      ta.remove()
-      done()
-    }
-  }
-  root.addEventListener('click', onClick)
-  return () => root.removeEventListener('click', onClick)
 }
