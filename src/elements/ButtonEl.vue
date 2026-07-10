@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useCms } from '../composables/useCms'
 import { textStrokeStyle } from '../composables/textStroke'
 import { paddingValue } from '../composables/styleHelpers'
@@ -106,14 +107,14 @@ function onPaste(e: ClipboardEvent): void {
     :style="{ ...btnStyle, textDecoration: 'none', cursor: cms.state.preview ? 'pointer' : 'inherit' }"
     @click.prevent="!cms.state.preview && $event.preventDefault()"
   >
-    <iconify-icon
+    <Icon
       v-if="element.iconName && iconPos === 'leading'"
       :icon="element.iconName"
       :width="iconSize"
       :height="iconSize"
     />
     <span>{{ element.content }}</span>
-    <iconify-icon
+    <Icon
       v-if="element.iconName && iconPos === 'trailing'"
       :icon="element.iconName"
       :width="iconSize"
@@ -121,14 +122,14 @@ function onPaste(e: ClipboardEvent): void {
     />
   </a>
   <div v-else :style="btnStyle">
-    <iconify-icon
+    <Icon
       v-if="element.iconName && iconPos === 'leading'"
       :icon="element.iconName"
       :width="iconSize"
       :height="iconSize"
     />
     <span>{{ element.content }}</span>
-    <iconify-icon
+    <Icon
       v-if="element.iconName && iconPos === 'trailing'"
       :icon="element.iconName"
       :width="iconSize"
