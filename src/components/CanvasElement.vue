@@ -83,6 +83,14 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     }
   }
 
+  // Only clamp inside parent while dragging when parent uses auto-layout — free-positioned
+  // children must be draggable out of their frame; autoReparent at drop reassigns parentId.
+  const parentEl = target.parentId
+    ? cms.state.elements.find((e) => e.id === target.parentId)
+    : null
+  const skipParentClamp =
+    !!parentEl && parentEl.type === 'frame' && (parentEl.layoutDirection ?? 'none') === 'none'
+
   const onMove = (ev: MouseEvent): void => {
     moved = true
     const dx = (ev.clientX - startX) / z
@@ -92,7 +100,7 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     if (groupIds) {
       // Move the whole selection using original positions + delta
       cms.clearGuides()
-      cms.moveMany(groupIds, originals, dx, dy)
+      cms.moveMany(groupIds, originals, dx, dy, { skipParentClamp: true })
       return
     }
 
@@ -101,14 +109,14 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
 
     if (skipSnap) {
       cms.clearGuides()
-      cms.move(target.id, rawX, rawY)
+      cms.move(target.id, rawX, rawY, { skipParentClamp })
       return
     }
     const siblings = cms.state.elements.filter(
       (e) => e.id !== target.id && e.parentId === target.parentId && cms.isEffectivelyVisible(e.id),
     )
     const { containerWidth, containerHeight, origin } = cms.snapContainerFor(target)
-    const parentBox = cms.parentInnerBox(target)
+    const parentBox = skipParentClamp ? null : cms.parentInnerBox(target)
     const snap = computeSnap(
       { x: rawX, y: rawY, width: target.width, height: target.height },
       siblings,
@@ -118,7 +126,7 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       parentBox ?? undefined,
     )
     cms.setGuides(translateGuides(snap.guides, origin.x, origin.y))
-    cms.move(target.id, snap.x, snap.y)
+    cms.move(target.id, snap.x, snap.y, { skipParentClamp })
   }
   const onUp = (): void => {
     document.removeEventListener('mousemove', onMove)

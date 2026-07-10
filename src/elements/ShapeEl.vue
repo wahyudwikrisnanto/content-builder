@@ -6,6 +6,7 @@ import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
 import { paddingValue } from '../composables/styleHelpers'
 import { borderRadiusCss } from '../composables/useBorderRadius'
+import { fontStack } from '../composables/fontFamilies'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -63,7 +64,7 @@ const textStyle = computed<CSSProperties>(() => {
     letterSpacing: (s.letterSpacing ?? 0) + 'px',
     outline: 'none',
     wordWrap: 'break-word',
-    fontFamily: 'inherit',
+    fontFamily: fontStack(s.fontFamily),
     cursor: props.isEditing ? 'text' : 'inherit',
     userSelect: props.isEditing ? 'text' : 'none',
     ...textStrokeStyle(s),

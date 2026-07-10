@@ -60,7 +60,7 @@ function createText(x = 60, y = 60, preset?: string): CmsElement {
       lineHeight: 1.5,
       letterSpacing: 0,
       borderRadius: 0,
-      padding: 10,
+      padding: 0,
       borderWidth: 0,
       borderColor: '#DDDDDD',
       opacity: 1,
@@ -284,7 +284,7 @@ function createInput(x = 60, y = 60, inputType: InputType = 'text'): CmsElement 
   }
 }
 
-function createIcon(x = 60, y = 60): CmsElement {
+function createIcon(x = 60, y = 60, iconName = 'mdi:star'): CmsElement {
   return {
     id: cmsUid(),
     type: 'icon',
@@ -292,7 +292,9 @@ function createIcon(x = 60, y = 60): CmsElement {
     y,
     width: 48,
     height: 48,
-    content: 'lucide:star',
+    content: '',
+    iconName,
+    iconSize: 32,
     styles: {
       color: '#222222',
       backgroundColor: 'transparent',

@@ -10,6 +10,7 @@ export type ElementType =
   | 'button'
   | 'input'
   | 'icon'
+export type IconPosition = 'leading' | 'trailing'
 export type InputType =
   | 'text'
   | 'email'
@@ -39,6 +40,7 @@ export interface BorderRadiusOptions {
 
 export interface ElementStyles {
   fontSize?: number
+  fontFamily?: string
   fontWeight?: FontWeight | string
   fontStyle?: 'normal' | 'italic'
   textDecoration?: 'none' | 'underline'
@@ -47,7 +49,7 @@ export interface ElementStyles {
   textAlign?: TextAlign
   lineHeight?: number
   letterSpacing?: number
-  borderRadius?: BorderRadiusOptions | number
+  borderRadius?: number | BorderRadiusOptions
   padding?: number
   paddingTop?: number
   paddingRight?: number
@@ -100,6 +102,11 @@ export interface CmsElement {
   inputLabel?: string
   required?: boolean
   inputOptions?: string // newline-separated options for select/radio
+  // icon element or button-embedded icon
+  iconName?: string
+  iconSize?: number
+  iconPosition?: IconPosition
+  iconGap?: number
 }
 
 export type FactoryKey =

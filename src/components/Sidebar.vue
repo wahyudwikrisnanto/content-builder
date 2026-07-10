@@ -42,7 +42,7 @@ const TYPE_ICON: Record<ElementType, string> = {
   code: 'code',
   button: 'button',
   input: 'input',
-  icon: 'lucide:star',
+  icon: 'square',
 }
 
 interface TextPreset {
@@ -224,7 +224,7 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
               <div class="element-item-icon"><Icon name="code" :size="22" /></div>
             </DragItem>
             <DragItem type="icon" label="Icon">
-              <div class="element-item-icon"><Icon name="lucide:star" :size="22" /></div>
+              <div class="element-item-icon"><Icon name="check" :size="22" /></div>
             </DragItem>
           </div>
         </div>

@@ -168,19 +168,7 @@ function renderFrame(el: CmsRenderElement, childRender?: string): string {
   const clip = el.clipContent ? 'overflow:hidden;' : ''
   const bw = s.borderWidth ?? 0
   const border = bw > 0 ? `border:${bw}px solid ${s.borderColor || '#D4D4D4'};` : ''
-
-  return `
-    <div ${dbg(el)} 
-      style="
-        ${commonBoxStyle(el)};
-        ${clip};
-        background-color:${s.backgroundColor || 'transparent'};
-        border-radius:${borderRadiusCss(s.borderRadius)};
-        ${border}
-      ">
-        ${childRender ?? ''}
-    </div>
-  `
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${borderRadiusCss(s.borderRadius)};${border}">${childRender ?? ''}</div></div>`
 }
 
 function renderButton(el: CmsRenderElement): string {

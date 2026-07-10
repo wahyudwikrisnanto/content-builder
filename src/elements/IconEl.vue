@@ -1,39 +1,40 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { Icon, loadIcon } from '@iconify/vue'
+import { computed } from 'vue'
+import type { CSSProperties } from 'vue'
+import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
-const props = defineProps<{ element: CmsElement }>()
+const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
 
-const s = computed(() => props.element.styles)
-const iconName = computed(() => props.element.content?.trim() || '')
-const valid = ref(true)
+const iconSize = computed(() => {
+  const s = props.element.iconSize
+  if (s && s > 0) return s
+  return Math.min(props.element.width, props.element.height)
+})
 
-watch(
-  iconName,
-  async (name) => {
-    if (!name || !name.includes(':')) { valid.value = false; return }
-    try { await loadIcon(name); valid.value = true }
-    catch { valid.value = false }
-  },
-  { immediate: true },
-)
-
-const resolved = computed(() => (valid.value && iconName.value ? iconName.value : 'lucide:circle-help'))
+const wrapStyle = computed<CSSProperties>(() => ({
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: props.element.styles.color || '#222222',
+  opacity: props.element.styles.opacity ?? 1,
+  backgroundColor: props.element.styles.backgroundColor || 'transparent',
+  borderRadius: borderRadiusCss(props.element.styles.borderRadius),
+  border: props.element.styles.borderWidth
+    ? `${props.element.styles.borderWidth}px solid ${props.element.styles.borderColor}`
+    : 'none',
+  boxSizing: 'border-box' as const,
+}))
 </script>
 
 <template>
-  <div
-    :style="{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: s.color || 'currentColor',
-      opacity: s.opacity ?? 1,
-    }"
-  >
-    <Icon :icon="resolved" :width="'100%'" :height="'100%'" />
+  <div :style="wrapStyle">
+    <iconify-icon
+      :icon="element.iconName || 'mdi:square-outline'"
+      :width="iconSize"
+      :height="iconSize"
+    />
   </div>
 </template>
