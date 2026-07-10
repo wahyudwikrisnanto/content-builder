@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
+import { Icon } from '@iconify/vue'
 import { borderRadiusCss } from '../composables/useBorderRadius'
 import type { CmsElement } from '../types'
 
@@ -31,7 +32,7 @@ const wrapStyle = computed<CSSProperties>(() => ({
 
 <template>
   <div :style="wrapStyle">
-    <iconify-icon
+    <Icon
       :icon="element.iconName || 'mdi:square-outline'"
       :width="iconSize"
       :height="iconSize"

@@ -338,14 +338,12 @@ function renderInput(el: CmsRenderElement): string {
 function iconImgHtml(el: CmsRenderElement): string {
   const s = el.styles
   const name = el.iconName || 'mdi:square-outline'
-  const colonIdx = name.indexOf(':')
-  if (colonIdx < 0) return ''
-  const prefix = name.slice(0, colonIdx)
-  const iconId = name.slice(colonIdx + 1)
   const color = s.color || '#222222'
   const size = el.iconSize && el.iconSize > 0 ? el.iconSize : Math.min(el.width, el.height)
-  return `<img src="https://api.iconify.design/${prefix}/${iconId}.svg?color=${encodeURIComponent(color)}" style="width:${size}px;height:${size}px" alt="${escape(name)}" />`
+  return `<iconify-icon icon="${escape(name)}" width="${size}" height="${size}" style="color:${color}"></iconify-icon>`
 }
+
+const ICONIFY_SCRIPT = `<script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"><\/script>`
 
 function renderIcon(el: CmsRenderElement): string {
   const s = el.styles
@@ -413,7 +411,8 @@ export function renderHtml(payload: RenderPayload): string {
     body += renderNode(element)
   }
 
-  return `<div class="content-render" style="position:relative;width:${w}px;height:${minHeight}px;background:white;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${body}</div>`
+  const hasIcons = els.some((e) => e.type === 'icon' || e.iconName)
+  return `${hasIcons ? ICONIFY_SCRIPT : ''}<div class="content-render" style="position:relative;width:${w}px;height:${minHeight}px;background:white;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${body}</div>`
 }
 
 // ---------------------------------------------------------------------------
@@ -828,6 +827,7 @@ export function renderFlowHtml(payload: RenderPayload): string {
     prevBottom = el.y + flowHeightOf(el)
   }
 
+  const hasIcons = els.some((e) => e.type === 'icon' || e.iconName)
   // `display:flow-root` establishes a BFC — prevents child margins from collapsing into this container
-  return `<div class="content-render-flow" style="display:flow-root;position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
+  return `${hasIcons ? ICONIFY_SCRIPT : ''}<div class="content-render-flow" style="display:flow-root;position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
 }
