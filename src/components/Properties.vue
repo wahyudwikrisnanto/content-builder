@@ -266,7 +266,7 @@ const headerLabel = computed(() => {
         </button>
       </div>
     </div>
-    <div class="prop-hint prop-hint--center">Press Delete to remove all selected elements</div>
+    <div class="prop-hint">Group wraps selection in a frame · Delete removes all</div>
   </div>
 
   <div v-else-if="!sel" class="properties">
@@ -1086,28 +1086,6 @@ const headerLabel = computed(() => {
           />
           <span>Show copy button</span>
         </label>
-      </div>
-    </div>
-
-    <div v-if="sel.type === 'icon'" class="prop-section">
-      <div class="prop-section-title">Icon</div>
-      <div class="prop-row">
-        <span class="prop-label">Name</span>
-        <input
-          class="prop-input"
-          type="text"
-          placeholder="lucide:star"
-          :value="sel.content || ''"
-          @input="upd(sel.id, 'content', targetValue($event))"
-        />
-      </div>
-      <div class="prop-hint" :style="{ marginLeft: '52px', fontSize: '10px' }">*(any Iconify icon — e.g. lucide:star, mdi:home)</div>
-      <div class="prop-row">
-        <span class="prop-label">Color</span>
-        <ColorInput
-          :model-value="sel.styles.color"
-          @update:model-value="(v: string) => sty(sel!.id, 'color', v)"
-        />
       </div>
     </div>
 

@@ -1,6 +1,7 @@
 import hljs from 'highlight.js/lib/common'
 import type { CmsElement, ElementStyles } from '../types'
 import { borderRadiusCss } from './useBorderRadius'
+import { fontStack } from './fontFamilies'
 
 export type CmsRenderElement = CmsElement
 
@@ -80,6 +81,7 @@ function textCss(s: ElementStyles, extra: Record<string, string> = {}): string {
     parts.push(`-webkit-text-stroke-color:${s.textStrokeColor || '#000'}`)
     parts.push(`paint-order:stroke fill`)
   }
+  parts.push(`font-family:${fontStack(s.fontFamily)}`)
   for (const [k, v] of Object.entries(extra)) parts.push(`${k}:${v}`)
   return parts.join(';')
 }
@@ -117,7 +119,6 @@ function renderText(el: CmsRenderElement): string {
     'background-color':
       s.backgroundColor === 'transparent' ? 'transparent' : s.backgroundColor || 'transparent',
     'border-radius': borderRadiusCss(s.borderRadius),
-    'font-family': 'inherit',
   })
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${style}">${inner}</div></div>`
 }
@@ -137,8 +138,8 @@ function renderShape(el: CmsRenderElement): string {
   const box = `display:flex;align-items:center;justify-content:${justify};overflow:hidden;width:100%;height:100%;${boxCss(s)}`
   const textInner =
     listType === 'none'
-      ? `<div style="${textCss(s, { width: '100%', 'white-space': 'pre-wrap', 'font-family': 'inherit' })}">${escape(el.content || '')}</div>`
-      : `<div style="${textCss(s, { width: '100%', 'font-family': 'inherit' })}">${renderListBody(el.content || '', listType)}</div>`
+      ? `<div style="${textCss(s, { width: '100%', 'white-space': 'pre-wrap' })}">${escape(el.content || '')}</div>`
+      : `<div style="${textCss(s, { width: '100%' })}">${renderListBody(el.content || '', listType)}</div>`
   return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${box}">${textInner}</div></div>`
 }
 
@@ -168,7 +169,31 @@ function renderFrame(el: CmsRenderElement, childRender?: string): string {
   const clip = el.clipContent ? 'overflow:hidden;' : ''
   const bw = s.borderWidth ?? 0
   const border = bw > 0 ? `border:${bw}px solid ${s.borderColor || '#D4D4D4'};` : ''
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${clip}width:100%;height:100%;background-color:${s.backgroundColor || 'transparent'};border-radius:${borderRadiusCss(s.borderRadius)};${border}">${childRender ?? ''}</div></div>`
+
+  return `
+    <div ${dbg(el)} 
+      style="
+        ${commonBoxStyle(el)};
+        ${clip};
+        background-color:${s.backgroundColor || 'transparent'};
+        border-radius:${borderRadiusCss(s.borderRadius)};
+        ${border}
+      ">
+        ${childRender ?? ''}
+    </div>
+  `
+}
+
+function buttonInnerHtml(el: CmsRenderElement, baseStyle: string): string {
+  const label = escape(el.content || '')
+  if (!el.iconName) return `<div style="${baseStyle}">${label}</div>`
+  const iconImg = iconImgHtml(el)
+  const gap = el.iconGap ?? 6
+  const content =
+    el.iconPosition === 'trailing'
+      ? `${label}<span style="display:inline-flex;margin-left:${gap}px">${iconImg}</span>`
+      : `<span style="display:inline-flex;margin-right:${gap}px">${iconImg}</span>${label}`
+  return `<div style="${baseStyle}">${content}</div>`
 }
 
 function renderButton(el: CmsRenderElement): string {
@@ -195,16 +220,15 @@ function renderButton(el: CmsRenderElement): string {
     'overflow:hidden',
     'box-sizing:border-box',
     'cursor:pointer',
-    'font-family:inherit',
+    `font-family:${fontStack(s.fontFamily)}`,
   ]
     .filter(Boolean)
     .join(';')
-  const label = escape(el.content || '')
   if (el.href) {
     const target = el.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : ''
-    return `<a ${dbg(el)} href="${escape(el.href)}"${target} style="${commonBoxStyle(el)};text-decoration:none"><div style="${baseStyle}">${label}</div></a>`
+    return `<a ${dbg(el)} href="${escape(el.href)}"${target} style="${commonBoxStyle(el)};text-decoration:none">${buttonInnerHtml(el, baseStyle)}</a>`
   }
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)}"><div style="${baseStyle}">${label}</div></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)}">${buttonInnerHtml(el, baseStyle)}</div>`
 }
 
 function renderCode(el: CmsRenderElement): string {
@@ -311,13 +335,26 @@ function renderInput(el: CmsRenderElement): string {
   return `<div ${dbg(el)} style="${commonBoxStyle(el)};opacity:${s.opacity ?? 1}">${inner}</div>`
 }
 
+function iconImgHtml(el: CmsRenderElement): string {
+  const s = el.styles
+  const name = el.iconName || 'mdi:square-outline'
+  const colonIdx = name.indexOf(':')
+  if (colonIdx < 0) return ''
+  const prefix = name.slice(0, colonIdx)
+  const iconId = name.slice(colonIdx + 1)
+  const color = s.color || '#222222'
+  const size = el.iconSize && el.iconSize > 0 ? el.iconSize : Math.min(el.width, el.height)
+  return `<img src="https://api.iconify.design/${prefix}/${iconId}.svg?color=${encodeURIComponent(color)}" style="width:${size}px;height:${size}px" alt="${escape(name)}" />`
+}
+
 function renderIcon(el: CmsRenderElement): string {
   const s = el.styles
-  const name = el.content || 'lucide:star'
-  // Iconify SVG via public API — works in static HTML export
-  const [prefix, ...rest] = name.split(':')
-  const iconId = rest.join(':')
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)};display:flex;align-items:center;justify-content:center;color:${s.color || 'currentColor'};opacity:${s.opacity ?? 1}"><img src="https://api.iconify.design/${prefix}/${iconId}.svg?color=${encodeURIComponent(s.color || '#222222')}" style="width:100%;height:100%" alt="${escape(name)}" /></div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)};display:flex;align-items:center;justify-content:center;opacity:${s.opacity ?? 1};border-radius:${borderRadiusCss(s.borderRadius)}">${iconImgHtml(el)}</div>`
+}
+
+function flowRenderIcon(el: CmsRenderElement, mt: number, cw: number): string {
+  const s = el.styles
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)};display:flex;align-items:center;justify-content:center;opacity:${s.opacity ?? 1};border-radius:${borderRadiusCss(s.borderRadius)}">${iconImgHtml(el)}</div>`
 }
 
 const RENDERERS: Record<string, (el: CmsRenderElement, childRender?: string) => string> = {
@@ -413,6 +450,7 @@ function flowTextOnlyCss(s: ElementStyles): string {
     parts.push(`-webkit-text-stroke-color:${s.textStrokeColor || '#000'}`)
     parts.push(`paint-order:stroke fill`)
   }
+  parts.push(`font-family:${fontStack(s.fontFamily)}`)
   return parts.join(';')
 }
 
@@ -462,7 +500,7 @@ function flowWrap(el: CmsRenderElement, mt: number, canvasW: number): string {
 function flowRenderText(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const lt = s.listType || 'none'
-  const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;font-family:inherit;${flowTextCss(s)}`
+  const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;${flowTextCss(s)}`
   const wrap = flowWrap(el, mt, cw)
   if (lt === 'bullet') {
     const items = (el.content || '')
@@ -494,7 +532,7 @@ function flowRenderShape(el: CmsRenderElement, mt: number, cw: number): string {
   const justify =
     s.textAlign === 'right' ? 'flex-end' : s.textAlign === 'center' ? 'center' : 'flex-start'
   const ar = el.width && el.height ? `aspect-ratio:${el.width}/${el.height}` : ''
-  const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;font-family:inherit;${flowTextOnlyCss(s)}`
+  const inner_css = `width:100%;word-wrap:break-word;overflow-wrap:break-word;${flowTextOnlyCss(s)}`
   const inner =
     lt === 'bullet'
       ? `<ul style="${inner_css};margin:0;padding-left:1.5em">${(el.content || '')
@@ -527,8 +565,10 @@ function flowRenderDivider(el: CmsRenderElement, mt: number, cw: number): string
 function flowRenderButton(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
   const btnStyle = [
-    'display:block',
+    'display:inline-flex',
+    'align-items:center',
     'width:100%',
+    `justify-content:${s.textAlign === 'left' ? 'flex-start' : s.textAlign === 'right' ? 'flex-end' : 'center'}`,
     `padding:${s.padding ?? 10}px 16px`,
     `background-color:${s.backgroundColor || '#2563EB'}`,
     `color:${s.color || '#FFF'}`,
@@ -536,18 +576,23 @@ function flowRenderButton(el: CmsRenderElement, mt: number, cw: number): string 
     `border-radius:${borderRadiusCss(s.borderRadius, 8)}`,
     `font-size:${s.fontSize ?? 14}px`,
     s.fontWeight ? `font-weight:${s.fontWeight}` : '',
-    `text-align:${s.textAlign || 'center'}`,
     'text-decoration:none',
     'cursor:pointer',
-    'font-family:inherit',
+    `font-family:${fontStack(s.fontFamily)}`,
     'box-sizing:border-box',
   ]
     .filter(Boolean)
     .join(';')
   const label = escape(el.content || 'Button')
+  const gap = el.iconGap ?? 6
+  const iconHtml = el.iconName
+    ? el.iconPosition === 'trailing'
+      ? `${label}<span style="display:inline-flex;margin-left:${gap}px">${iconImgHtml(el)}</span>`
+      : `<span style="display:inline-flex;margin-right:${gap}px">${iconImgHtml(el)}</span>${label}`
+    : label
   const link = el.href
-    ? `<a href="${escape(el.href)}"${el.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : ''} style="${btnStyle}">${label}</a>`
-    : `<span style="${btnStyle}">${label}</span>`
+    ? `<a href="${escape(el.href)}"${el.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : ''} style="${btnStyle}">${iconHtml}</a>`
+    : `<span style="${btnStyle}">${iconHtml}</span>`
   return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)}">${link}</div>`
 }
 
@@ -667,6 +712,7 @@ export function renderFlowHtml(payload: RenderPayload): string {
     if (el.type === 'divider') return flowRenderDivider(el, mt, cw)
     if (el.type === 'button') return flowRenderButton(el, mt, cw)
     if (el.type === 'code') return flowRenderCode(el, mt, cw)
+    if (el.type === 'icon') return flowRenderIcon(el, mt, cw)
     if (el.type === 'input') return flowRenderInput(el, mt, cw)
     if (el.type === 'frame' || el.type === 'container') {
       const s = el.styles
