@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from '../icons/Icon.vue'
+import { radiusValue } from '../composables/styleHelpers'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing?: boolean }>()
@@ -18,7 +19,7 @@ void props
         height: '100%',
         objectFit: element.styles.objectFit || 'cover',
         objectPosition: element.styles.objectPosition || 'center',
-        borderRadius: element.styles.borderRadius + 'px',
+        borderRadius: radiusValue(element.styles.borderRadius),
         display: 'block',
       }"
     />

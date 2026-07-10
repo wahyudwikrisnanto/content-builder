@@ -3,7 +3,8 @@ import { ref, watch, nextTick, computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { textStrokeStyle } from '../composables/textStroke'
-import { paddingValue } from '../composables/styleHelpers'
+import { paddingValue, radiusValue } from '../composables/styleHelpers'
+import { fontStack } from '../composables/fontFamilies'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -23,7 +24,7 @@ const btnStyle = computed<CSSProperties>(() => {
     backgroundColor: s.backgroundColor || '#2563EB',
     color: s.color || '#FFFFFF',
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
-    borderRadius: (s.borderRadius ?? 8) + 'px',
+    borderRadius: radiusValue(s.borderRadius, 8),
     opacity: s.opacity ?? 1,
     fontSize: (s.fontSize ?? 14) + 'px',
     fontWeight: s.fontWeight as CSSProperties['fontWeight'],
@@ -32,16 +33,20 @@ const btnStyle = computed<CSSProperties>(() => {
     textAlign: s.textAlign || 'center',
     lineHeight: s.lineHeight ?? 1.2,
     letterSpacing: (s.letterSpacing ?? 0) + 'px',
-    fontFamily: 'inherit',
+    fontFamily: fontStack(s.fontFamily),
     outline: 'none',
     overflow: 'hidden',
     whiteSpace: 'nowrap',
     cursor: props.isEditing ? 'text' : 'inherit',
     userSelect: props.isEditing ? 'text' : 'none',
     boxSizing: 'border-box',
+    gap: (props.element.iconGap ?? 6) + 'px',
     ...textStrokeStyle(s),
   }
 })
+
+const iconPos = computed(() => props.element.iconPosition ?? 'leading')
+const iconSize = computed(() => props.element.iconSize ?? Math.round((props.element.styles.fontSize ?? 14) * 1.15))
 
 watch(
   () => props.isEditing,
@@ -93,12 +98,40 @@ function onPaste(e: ClipboardEvent): void {
     @keydown="onKeyDown"
   ></div>
   <a
-    v-else-if="cms.state.preview && element.href"
-    :href="element.href"
+    v-else-if="element.href"
+    :href="cms.state.preview ? element.href : undefined"
     :target="element.target || '_self'"
     rel="noopener noreferrer"
-    :style="{ ...btnStyle, textDecoration: 'none', cursor: 'pointer' }"
-    >{{ element.content }}</a
+    :style="{ ...btnStyle, textDecoration: 'none', cursor: cms.state.preview ? 'pointer' : 'inherit' }"
+    @click.prevent="!cms.state.preview && $event.preventDefault()"
   >
-  <div v-else :style="btnStyle">{{ element.content }}</div>
+    <iconify-icon
+      v-if="element.iconName && iconPos === 'leading'"
+      :icon="element.iconName"
+      :width="iconSize"
+      :height="iconSize"
+    />
+    <span>{{ element.content }}</span>
+    <iconify-icon
+      v-if="element.iconName && iconPos === 'trailing'"
+      :icon="element.iconName"
+      :width="iconSize"
+      :height="iconSize"
+    />
+  </a>
+  <div v-else :style="btnStyle">
+    <iconify-icon
+      v-if="element.iconName && iconPos === 'leading'"
+      :icon="element.iconName"
+      :width="iconSize"
+      :height="iconSize"
+    />
+    <span>{{ element.content }}</span>
+    <iconify-icon
+      v-if="element.iconName && iconPos === 'trailing'"
+      :icon="element.iconName"
+      :width="iconSize"
+      :height="iconSize"
+    />
+  </div>
 </template>

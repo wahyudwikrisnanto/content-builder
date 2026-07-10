@@ -4,7 +4,8 @@ import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
 import { useAutoSize } from '../composables/useAutoSize'
 import { textStrokeStyle } from '../composables/textStroke'
-import { paddingValue } from '../composables/styleHelpers'
+import { paddingValue, radiusValue } from '../composables/styleHelpers'
+import { fontStack } from '../composables/fontFamilies'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
@@ -38,7 +39,7 @@ const baseStyle = computed<CSSProperties>(() => {
   return {
     width: '100%',
     height: '100%',
-    padding: paddingValue(s) ?? (s.padding ?? 10) + 'px',
+    padding: paddingValue(s) ?? (s.padding ?? 0) + 'px',
     fontSize: s.fontSize + 'px',
     fontWeight: s.fontWeight as CSSProperties['fontWeight'],
     fontStyle: s.fontStyle,
@@ -48,11 +49,11 @@ const baseStyle = computed<CSSProperties>(() => {
     textAlign: s.textAlign,
     lineHeight: s.lineHeight,
     letterSpacing: s.letterSpacing + 'px',
-    borderRadius: s.borderRadius + 'px',
+    borderRadius: radiusValue(s.borderRadius),
     overflow: props.isEditing ? 'visible' : 'hidden',
     wordWrap: 'break-word',
     outline: 'none',
-    fontFamily: 'inherit',
+    fontFamily: fontStack(s.fontFamily),
     ...textStrokeStyle(s),
   }
 })

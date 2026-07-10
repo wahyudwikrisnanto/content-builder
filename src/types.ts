@@ -9,6 +9,8 @@ export type ElementType =
   | 'code'
   | 'button'
   | 'input'
+  | 'icon'
+export type IconPosition = 'leading' | 'trailing'
 export type InputType =
   | 'text'
   | 'email'
@@ -29,8 +31,15 @@ export type ObjectFit = 'cover' | 'contain' | 'fill'
 export type LayoutDirection = 'none' | 'vertical' | 'horizontal'
 export type LayoutAlign = 'start' | 'center' | 'end' | 'stretch'
 
+export interface BorderRadiusCorners {
+  borderTopLeftRadius?: number
+  borderTopRightRadius?: number
+  borderBottomLeftRadius?: number
+  borderBottomRightRadius?: number
+}
 export interface ElementStyles {
   fontSize?: number
+  fontFamily?: string
   fontWeight?: FontWeight | string
   fontStyle?: 'normal' | 'italic'
   textDecoration?: 'none' | 'underline'
@@ -39,7 +48,7 @@ export interface ElementStyles {
   textAlign?: TextAlign
   lineHeight?: number
   letterSpacing?: number
-  borderRadius?: number
+  borderRadius?: number | BorderRadiusCorners
   padding?: number
   paddingTop?: number
   paddingRight?: number
@@ -89,6 +98,11 @@ export interface CmsElement {
   inputLabel?: string
   required?: boolean
   inputOptions?: string // newline-separated options for select/radio
+  // icon element or button-embedded icon
+  iconName?: string
+  iconSize?: number
+  iconPosition?: IconPosition
+  iconGap?: number
 }
 
 export type FactoryKey =
@@ -116,6 +130,7 @@ export type FactoryKey =
   | 'input-select'
   | 'input-checkbox'
   | 'input-radio'
+  | 'icon'
 
 export type Factory = (x?: number, y?: number) => CmsElement
 

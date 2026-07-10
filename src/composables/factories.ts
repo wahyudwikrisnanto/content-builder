@@ -60,7 +60,7 @@ function createText(x = 60, y = 60, preset?: string): CmsElement {
       lineHeight: 1.5,
       letterSpacing: 0,
       borderRadius: 0,
-      padding: 10,
+      padding: 0,
       borderWidth: 0,
       borderColor: '#DDDDDD',
       opacity: 1,
@@ -284,6 +284,29 @@ function createInput(x = 60, y = 60, inputType: InputType = 'text'): CmsElement 
   }
 }
 
+function createIcon(x = 60, y = 60, iconName = 'mdi:star'): CmsElement {
+  return {
+    id: cmsUid(),
+    type: 'icon',
+    x,
+    y,
+    width: 48,
+    height: 48,
+    content: '',
+    iconName,
+    iconSize: 32,
+    styles: {
+      color: '#222222',
+      backgroundColor: 'transparent',
+      borderRadius: 0,
+      borderWidth: 0,
+      borderColor: '#DDDDDD',
+      opacity: 1,
+    },
+    ...baseFlags(),
+  }
+}
+
 function createContainer(x = 60, y = 60): CmsElement {
   return {
     id: cmsUid(),
@@ -330,4 +353,5 @@ export const CmsFactories: Record<FactoryKey, Factory> = {
   'input-select': (x, y) => createInput(x, y, 'select'),
   'input-checkbox': (x, y) => createInput(x, y, 'checkbox'),
   'input-radio': (x, y) => createInput(x, y, 'radio'),
+  icon: createIcon,
 }

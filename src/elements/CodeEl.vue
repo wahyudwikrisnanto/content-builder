@@ -4,7 +4,7 @@ import type { CSSProperties } from 'vue'
 import hljs from 'highlight.js/lib/common'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useCms } from '../composables/useCms'
-import { paddingValue } from '../composables/styleHelpers'
+import { paddingValue, radiusValue } from '../composables/styleHelpers'
 import Icon from '../icons/Icon.vue'
 import type { CmsElement } from '../types'
 
@@ -43,7 +43,7 @@ const boxStyle = computed<CSSProperties>(() => {
     width: '100%',
     height: '100%',
     backgroundColor: s.backgroundColor || '#282C34',
-    borderRadius: (s.borderRadius ?? 0) + 'px',
+    borderRadius: radiusValue(s.borderRadius),
     border: s.borderWidth ? `${s.borderWidth}px solid ${s.borderColor}` : 'none',
     opacity: s.opacity ?? 1,
     overflow: 'hidden',

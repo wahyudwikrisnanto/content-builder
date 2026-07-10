@@ -5,6 +5,7 @@ import { usePlugins, findDialogPlugins } from '../composables/usePlugins'
 import Icon from '../icons/Icon.vue'
 import ColorInput from './ColorInput.vue'
 import SearchableSelect from './SearchableSelect.vue'
+import { FONT_FAMILIES } from '../composables/fontFamilies'
 import type {
   ElementType,
   InputType,
@@ -39,6 +40,7 @@ const TYPE_LABELS: Record<ElementType, string> = {
   code: 'Code',
   button: 'Button',
   input: 'Input',
+  icon: 'Icon',
 }
 
 const INPUT_TYPES: { v: InputType; label: string }[] = [
@@ -155,7 +157,11 @@ function upd(
     | 'inputLabel'
     | 'placeholder'
     | 'inputOptions'
-    | 'required',
+    | 'required'
+    | 'iconName'
+    | 'iconSize'
+    | 'iconPosition'
+    | 'iconGap',
   v: number | string | boolean,
 ): void {
   cms.updateElement(id, { [k]: v } as Partial<CmsElement>)
@@ -171,6 +177,43 @@ function setPadY(id: string, v: number): void {
   cms.updateStyles(id, { paddingTop: v, paddingBottom: v })
 }
 const padSidesExpanded = ref(false)
+const radiusCornersExpanded = ref(false)
+
+type RadiusCornerKey =
+  | 'borderTopLeftRadius'
+  | 'borderTopRightRadius'
+  | 'borderBottomRightRadius'
+  | 'borderBottomLeftRadius'
+
+function radiusScalar(v: ElementStyles['borderRadius']): number {
+  if (typeof v === 'number') return v
+  if (v && typeof v === 'object') return v.borderTopLeftRadius ?? 0
+  return 0
+}
+function radiusCorner(v: ElementStyles['borderRadius'], k: RadiusCornerKey): number {
+  if (typeof v === 'number') return v
+  if (v && typeof v === 'object') return v[k] ?? 0
+  return 0
+}
+function setRadiusScalar(id: string, n: number): void {
+  cms.updateStyles(id, { borderRadius: n })
+}
+function setRadiusCorner(id: string, k: RadiusCornerKey, n: number): void {
+  const el = cms.state.elements.find((e) => e.id === id)
+  if (!el) return
+  const cur = el.styles.borderRadius
+  const base =
+    typeof cur === 'number'
+      ? {
+          borderTopLeftRadius: cur,
+          borderTopRightRadius: cur,
+          borderBottomRightRadius: cur,
+          borderBottomLeftRadius: cur,
+        }
+      : { ...(cur ?? {}) }
+  base[k] = n
+  cms.updateStyles(id, { borderRadius: base })
+}
 
 function parseImgPos(v?: string): { x: string; y: string } {
   if (!v || v === 'center') return { x: '50%', y: '50%' }
@@ -215,12 +258,15 @@ const headerLabel = computed(() => {
     <div class="properties-header">
       <span>{{ cms.state.selectedIds.length }} selected</span>
       <div :style="{ display: 'flex', gap: '2px', marginLeft: 'auto' }">
+        <button class="icon-btn" title="Group into frame" @click="cms.groupSelection()">
+          <Icon name="frame" :size="15" />
+        </button>
         <button class="icon-btn" title="Delete selected" @click="cms.deleteSelected()">
           <Icon name="trash" :size="15" />
         </button>
       </div>
     </div>
-    <div class="prop-hint">Press Delete to remove all selected elements</div>
+    <div class="prop-hint">Group wraps selection in a frame · Delete removes all</div>
   </div>
 
   <div v-else-if="!sel" class="properties">
@@ -368,6 +414,16 @@ const headerLabel = computed(() => {
     >
       <div class="prop-section-title">Typography</div>
       <div class="prop-row">
+        <span class="prop-label">Font</span>
+        <select
+          class="prop-select"
+          :value="sel.styles.fontFamily || 'inherit'"
+          @change="sty(sel.id, 'fontFamily', targetValue($event))"
+        >
+          <option v-for="f in FONT_FAMILIES" :key="f.value" :value="f.value">{{ f.label }}</option>
+        </select>
+      </div>
+      <div class="prop-row">
         <span class="prop-label">Size</span>
         <input
           class="prop-input"
@@ -481,6 +537,230 @@ const headerLabel = computed(() => {
       </div>
     </div>
 
+    <div
+      v-if="sel.type === 'text' || sel.type === 'button' || sel.type === 'shape' || sel.type === 'input' || sel.type === 'code'"
+      class="prop-section"
+    >
+      <div class="prop-section-title">Padding</div>
+      <div class="prop-row">
+        <span class="prop-label"></span>
+        <button
+          class="btn-sm"
+          :title="padSidesExpanded ? 'Use paired H/V inputs' : 'Set each side individually'"
+          :style="{ marginLeft: 'auto', padding: '3px 6px' }"
+          @click="padSidesExpanded = !padSidesExpanded"
+        >
+          {{ padSidesExpanded ? '⧉ Sides' : '⇔ H/V' }}
+        </button>
+      </div>
+      <template v-if="!padSidesExpanded">
+        <div class="prop-row-pair">
+          <div class="prop-row">
+            <span class="prop-label" title="Horizontal (left + right)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 4v16M20 4v16" />
+                <path d="M4 12h4M16 12h4" />
+              </svg>
+            </span>
+            <input
+              class="prop-input"
+              type="number"
+              :min="0"
+              placeholder="0"
+              :value="sel.styles.paddingLeft ?? sel.styles.padding ?? ''"
+              @input="setPadX(sel.id, targetNumber($event))"
+            />
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" title="Vertical (top + bottom)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 4h16M4 20h16" />
+                <path d="M12 4v4M12 16v4" />
+              </svg>
+            </span>
+            <input
+              class="prop-input"
+              type="number"
+              :min="0"
+              placeholder="0"
+              :value="sel.styles.paddingTop ?? sel.styles.padding ?? ''"
+              @input="setPadY(sel.id, targetNumber($event))"
+            />
+          </div>
+        </div>
+      </template>
+      <template v-else>
+        <div class="prop-row-pair">
+          <div class="prop-row">
+            <span class="prop-label" title="Top">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 5h16" />
+                <path d="M12 10v9" />
+                <polyline points="9,13 12,10 15,13" />
+              </svg>
+            </span>
+            <input
+              class="prop-input"
+              type="number"
+              :min="0"
+              placeholder="0"
+              :value="sel.styles.paddingTop ?? sel.styles.padding ?? ''"
+              @input="sty(sel.id, 'paddingTop', targetNumber($event))"
+            />
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" title="Right">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M19 4v16" />
+                <path d="M14 12H5" />
+                <polyline points="11,9 14,12 11,15" />
+              </svg>
+            </span>
+            <input
+              class="prop-input"
+              type="number"
+              :min="0"
+              placeholder="0"
+              :value="sel.styles.paddingRight ?? sel.styles.padding ?? ''"
+              @input="sty(sel.id, 'paddingRight', targetNumber($event))"
+            />
+          </div>
+        </div>
+        <div class="prop-row-pair">
+          <div class="prop-row">
+            <span class="prop-label" title="Bottom">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 19h16" />
+                <path d="M12 5v9" />
+                <polyline points="9,11 12,14 15,11" />
+              </svg>
+            </span>
+            <input
+              class="prop-input"
+              type="number"
+              :min="0"
+              placeholder="0"
+              :value="sel.styles.paddingBottom ?? sel.styles.padding ?? ''"
+              @input="sty(sel.id, 'paddingBottom', targetNumber($event))"
+            />
+          </div>
+          <div class="prop-row">
+            <span class="prop-label" title="Left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M5 4v16" />
+                <path d="M10 12h9" />
+                <polyline points="13,9 10,12 13,15" />
+              </svg>
+            </span>
+            <input
+              class="prop-input"
+              type="number"
+              :min="0"
+              placeholder="0"
+              :value="sel.styles.paddingLeft ?? sel.styles.padding ?? ''"
+              @input="sty(sel.id, 'paddingLeft', targetNumber($event))"
+            />
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div v-if="sel.type === 'icon'" class="prop-section">
+      <div class="prop-section-title">Icon</div>
+      <div class="prop-row">
+        <span class="prop-label">Name</span>
+        <input
+          class="prop-input"
+          type="text"
+          placeholder="mdi:home"
+          :value="sel.iconName || ''"
+          @input="upd(sel.id, 'iconName', targetValue($event))"
+        />
+      </div>
+      <div class="prop-hint" :style="{ marginLeft: '52px' }">
+        Browse names at icon-sets.iconify.design
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Size</span>
+        <input
+          class="prop-input"
+          type="number"
+          :min="8"
+          :max="512"
+          :value="sel.iconSize ?? 32"
+          @input="upd(sel.id, 'iconSize', targetNumber($event))"
+        />
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Color</span>
+        <ColorInput
+          :model-value="sel.styles.color || '#222222'"
+          @update:model-value="(v: string) => sty(sel!.id, 'color', v)"
+        />
+      </div>
+    </div>
+
+    <div v-if="sel.type === 'button'" class="prop-section">
+      <div class="prop-section-title">Button icon</div>
+      <div class="prop-row">
+        <span class="prop-label">Name</span>
+        <input
+          class="prop-input"
+          type="text"
+          placeholder="mdi:arrow-right"
+          :value="sel.iconName || ''"
+          @input="upd(sel.id, 'iconName', targetValue($event))"
+        />
+      </div>
+      <div class="prop-hint" :style="{ marginLeft: '52px' }">
+        Any Iconify name — blank = no icon
+      </div>
+      <template v-if="sel.iconName">
+        <div class="prop-row">
+          <span class="prop-label">Position</span>
+          <div class="toggle-group">
+            <button
+              title="Icon on left"
+              :class="['toggle-btn', { active: (sel.iconPosition ?? 'leading') === 'leading' }]"
+              @click="upd(sel.id, 'iconPosition', 'leading')"
+            >
+              <Icon name="align-left-edge" :size="14" />
+            </button>
+            <button
+              title="Icon on right"
+              :class="['toggle-btn', { active: sel.iconPosition === 'trailing' }]"
+              @click="upd(sel.id, 'iconPosition', 'trailing')"
+            >
+              <Icon name="align-right-edge" :size="14" />
+            </button>
+          </div>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Size</span>
+          <input
+            class="prop-input"
+            type="number"
+            :min="8"
+            :max="128"
+            placeholder="auto"
+            :value="sel.iconSize ?? ''"
+            @input="upd(sel.id, 'iconSize', targetNumber($event))"
+          />
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">Gap</span>
+          <input
+            class="prop-input"
+            type="number"
+            :min="0"
+            :max="64"
+            :value="sel.iconGap ?? 6"
+            @input="upd(sel.id, 'iconGap', targetNumber($event))"
+          />
+        </div>
+      </template>
+    </div>
+
     <div class="prop-section">
       <div class="prop-section-title">Appearance</div>
       <div v-if="sel.type === 'divider'" class="prop-row">
@@ -499,16 +779,89 @@ const headerLabel = computed(() => {
         />
       </div>
 
-      <div v-if="sel.styles.borderRadius !== undefined && sel.type !== 'divider'" class="prop-row">
-        <span class="prop-label">Radius</span>
-        <input
-          class="prop-input"
-          type="number"
-          :min="0"
-          :value="sel.styles.borderRadius"
-          @input="sty(sel.id, 'borderRadius', targetNumber($event))"
-        />
-      </div>
+      <template v-if="sel.styles.borderRadius !== undefined && sel.type !== 'divider'">
+        <div class="prop-row">
+          <span class="prop-label">Radius</span>
+          <input
+            v-if="!radiusCornersExpanded"
+            class="prop-input"
+            type="number"
+            :min="0"
+            :value="radiusScalar(sel.styles.borderRadius)"
+            @input="setRadiusScalar(sel.id, targetNumber($event))"
+          />
+          <button
+            class="btn-sm"
+            :title="radiusCornersExpanded ? 'Uniform radius' : 'Set each corner'"
+            :style="{ marginLeft: 'auto', padding: '3px 6px' }"
+            @click="radiusCornersExpanded = !radiusCornersExpanded"
+          >
+            {{ radiusCornersExpanded ? '⧉ Corners' : '⇔ All' }}
+          </button>
+        </div>
+        <template v-if="radiusCornersExpanded">
+          <div class="prop-row-pair">
+            <div class="prop-row">
+              <span class="prop-label" title="Top-left">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 20V10a6 6 0 0 1 6-6h10" />
+                </svg>
+              </span>
+              <input
+                class="prop-input"
+                type="number"
+                :min="0"
+                :value="radiusCorner(sel.styles.borderRadius, 'borderTopLeftRadius')"
+                @input="setRadiusCorner(sel.id, 'borderTopLeftRadius', targetNumber($event))"
+              />
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" title="Top-right">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h10a6 6 0 0 1 6 6v10" />
+                </svg>
+              </span>
+              <input
+                class="prop-input"
+                type="number"
+                :min="0"
+                :value="radiusCorner(sel.styles.borderRadius, 'borderTopRightRadius')"
+                @input="setRadiusCorner(sel.id, 'borderTopRightRadius', targetNumber($event))"
+              />
+            </div>
+          </div>
+          <div class="prop-row-pair">
+            <div class="prop-row">
+              <span class="prop-label" title="Bottom-left">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4v10a6 6 0 0 0 6 6h10" />
+                </svg>
+              </span>
+              <input
+                class="prop-input"
+                type="number"
+                :min="0"
+                :value="radiusCorner(sel.styles.borderRadius, 'borderBottomLeftRadius')"
+                @input="setRadiusCorner(sel.id, 'borderBottomLeftRadius', targetNumber($event))"
+              />
+            </div>
+            <div class="prop-row">
+              <span class="prop-label" title="Bottom-right">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 4v10a6 6 0 0 1-6 6H4" />
+                </svg>
+              </span>
+              <input
+                class="prop-input"
+                type="number"
+                :min="0"
+                :value="radiusCorner(sel.styles.borderRadius, 'borderBottomRightRadius')"
+                @input="setRadiusCorner(sel.id, 'borderBottomRightRadius', targetNumber($event))"
+              />
+            </div>
+          </div>
+        </template>
+      </template>
 
       <div v-if="sel.styles.borderWidth !== undefined && sel.type !== 'divider'" class="prop-row">
         <span class="prop-label">Border</span>

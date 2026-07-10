@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { radiusValue } from '../composables/styleHelpers'
 import type { CmsElement } from '../types'
 defineProps<{ element: CmsElement }>()
 </script>
@@ -10,7 +11,7 @@ defineProps<{ element: CmsElement }>()
       height: '100%',
       backgroundColor: element.styles.backgroundColor,
       opacity: element.styles.opacity,
-      borderRadius: element.styles.borderRadius + 'px',
+      borderRadius: radiusValue(element.styles.borderRadius),
     }"
   ></div>
 </template>

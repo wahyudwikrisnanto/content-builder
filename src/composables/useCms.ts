@@ -420,7 +420,7 @@ const actions = {
   toggleSidebar(): void {
     state.sidebarHidden = !state.sidebarHidden
   },
-  move(id: string, x: number, y: number): void {
+  move(id: string, x: number, y: number, opts: { skipParentClamp?: boolean } = {}): void {
     const i = findIdx(id)
     if (i < 0) return
     const el = state.elements[i]
@@ -431,8 +431,10 @@ const actions = {
       state.canvasHeight,
       state.flexibleHeight,
     )
-    const clamped = clampInsideParent(el, { x: c.x, y: c.y })
-    c = { ...c, x: clamped.x, y: clamped.y }
+    if (!opts.skipParentClamp) {
+      const clamped = clampInsideParent(el, { x: c.x, y: c.y })
+      c = { ...c, x: clamped.x, y: clamped.y }
+    }
     const dx = c.x - el.x,
       dy = c.y - el.y
     state.elements[i] = { ...el, x: c.x, y: c.y }
@@ -458,6 +460,7 @@ const actions = {
     originals: Map<string, { x: number; y: number }>,
     dx: number,
     dy: number,
+    opts: { skipParentClamp?: boolean } = {},
   ): void {
     if (!ids.length) return
     const ownership = new Set<string>()
@@ -495,7 +498,7 @@ const actions = {
       const orig = originals.get(el.id)
       if (!orig) return el
       const proposed = { x: el.responsive ? 0 : orig.x + finalDx, y: orig.y + finalDy }
-      const clamped = clampInsideParent(el, proposed)
+      const clamped = opts.skipParentClamp ? proposed : clampInsideParent(el, proposed)
       return { ...el, x: clamped.x, y: clamped.y }
     })
   },
@@ -560,8 +563,55 @@ const actions = {
     if (!opts.noHistory) snapshot()
     state.elements[i] = { ...state.elements[i], parentId }
   },
+  /**
+   * Wrap current multi-selection in a new Frame. Preserves each child's absolute position by
+   * setting the frame's bbox to the selection's bounding box (with 8px inset padding).
+   * Only top-level members of selectedIds become children — nested ids stay under their existing parent.
+   */
   groupSelection(): void {
-    // Future hook: collect multi-select. Currently single-select: noop unless extended.
+    const ids = state.selectedIds
+    if (ids.length < 2) return
+    const els = ids.map((id) => state.elements.find((e) => e.id === id)).filter(Boolean) as CmsElement[]
+    if (els.length < 2) return
+    // Refuse when selection spans multiple parents — keeps parent-relative layout sane.
+    const parents = new Set(els.map((e) => e.parentId ?? null))
+    if (parents.size > 1) return
+    const sharedParent = els[0].parentId ?? null
+
+    snapshot()
+    const pad = 8
+    const minX = Math.min(...els.map((e) => e.x)) - pad
+    const minY = Math.min(...els.map((e) => e.y)) - pad
+    const maxX = Math.max(...els.map((e) => e.x + e.width)) + pad
+    const maxY = Math.max(...els.map((e) => e.y + e.height)) + pad
+    const frame: CmsElement = {
+      id: cmsUid(),
+      type: 'frame',
+      x: minX,
+      y: minY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY),
+      content: '',
+      name: 'Group',
+      styles: {
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        borderWidth: 0,
+        borderColor: '#D4D4D4',
+        opacity: 1,
+      },
+      parentId: sharedParent,
+      visible: true,
+      locked: false,
+    }
+    const idSet = new Set(ids)
+    // Insert frame just before the first grouped element, then reparent them.
+    const firstIdx = state.elements.findIndex((e) => idSet.has(e.id))
+    const next = state.elements.map((e) => (idSet.has(e.id) ? { ...e, parentId: frame.id } : e))
+    next.splice(firstIdx, 0, frame)
+    state.elements = next
+    state.selectedIds = []
+    state.selectedId = frame.id
   },
   autoReparent(id: string): void {
     const i = findIdx(id)
@@ -852,7 +902,15 @@ const actions = {
       if (typeof c.flexibleHeight === 'boolean') state.flexibleHeight = c.flexibleHeight
     }
 
-    state.elements = (data.elements as CmsElement[]).map((e) => ({ ...cloneEl(e) }))
+    state.elements = (data.elements as CmsElement[]).map((e) => {
+      const c = cloneEl(e)
+      // Legacy/interop: some payloads stash the iconify name in `content` instead of `iconName`.
+      if (c.type === 'icon' && !c.iconName && c.content) {
+        c.iconName = c.content
+        c.content = ''
+      }
+      return c
+    })
     state.selectedId = null
     state.editingTextId = null
     state.guides = []

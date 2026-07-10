@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { CSSProperties } from 'vue'
 import { useCms } from '../composables/useCms'
+import { radiusValue } from '../composables/styleHelpers'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement }>()
@@ -14,7 +15,7 @@ const style = computed<CSSProperties>(() => {
     width: '100%',
     height: '100%',
     backgroundColor: s.backgroundColor || 'transparent',
-    borderRadius: (s.borderRadius ?? 0) + 'px',
+    borderRadius: radiusValue(s.borderRadius),
     border: bw > 0 ? `${bw}px solid ${s.borderColor || '#D4D4D4'}` : 'none',
     opacity: s.opacity ?? 1,
     position: 'relative',

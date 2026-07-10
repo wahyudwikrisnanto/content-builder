@@ -17,6 +17,7 @@ import FrameEl from '../elements/FrameEl.vue'
 import CodeEl from '../elements/CodeEl.vue'
 import ButtonEl from '../elements/ButtonEl.vue'
 import InputEl from '../elements/InputEl.vue'
+import IconEl from '../elements/IconEl.vue'
 import ResizeHandles from './ResizeHandles.vue'
 import type { CmsElement, ElementType } from '../types'
 import type { Component } from 'vue'
@@ -36,6 +37,7 @@ const RENDERERS: Record<ElementType, Component> = {
   code: CodeEl,
   button: ButtonEl,
   input: InputEl,
+  icon: IconEl,
 }
 
 const activeRenderer = computed<Component>(() => {
@@ -98,6 +100,14 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     }
   }
 
+  // Only clamp inside parent while dragging when parent uses auto-layout — free-positioned
+  // children must be draggable out of their frame; autoReparent at drop reassigns parentId.
+  const parentEl = target.parentId
+    ? cms.state.elements.find((e) => e.id === target.parentId)
+    : null
+  const skipParentClamp =
+    !!parentEl && parentEl.type === 'frame' && (parentEl.layoutDirection ?? 'none') === 'none'
+
   const onMove = (ev: MouseEvent): void => {
     moved = true
     const dx = (ev.clientX - startX) / z
@@ -107,7 +117,7 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
     if (groupIds) {
       // Move the whole selection using original positions + delta
       cms.clearGuides()
-      cms.moveMany(groupIds, originals, dx, dy)
+      cms.moveMany(groupIds, originals, dx, dy, { skipParentClamp: true })
       return
     }
 
@@ -116,13 +126,13 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
 
     if (skipSnap) {
       cms.clearGuides()
-      cms.move(target.id, rawX, rawY)
+      cms.move(target.id, rawX, rawY, { skipParentClamp })
       return
     }
     const siblings = cms.state.elements.filter(
       (e) => e.id !== target.id && cms.isEffectivelyVisible(e.id),
     )
-    const parentBox = cms.parentInnerBox(target)
+    const parentBox = skipParentClamp ? null : cms.parentInnerBox(target)
     const snap = computeSnap(
       { x: rawX, y: rawY, width: target.width, height: target.height },
       siblings,
@@ -132,7 +142,7 @@ function beginDragFor(target: CmsElement, e: MouseEvent): void {
       parentBox ?? undefined,
     )
     cms.setGuides(snap.guides)
-    cms.move(target.id, snap.x, snap.y)
+    cms.move(target.id, snap.x, snap.y, { skipParentClamp })
   }
   const onUp = (): void => {
     document.removeEventListener('mousemove', onMove)
