@@ -337,22 +337,23 @@ function renderInput(el: CmsRenderElement): string {
 
 function iconImgHtml(el: CmsRenderElement): string {
   const s = el.styles
-  const name = el.iconName || 'mdi:square-outline'
-  const color = s.color || '#222222'
+  const raw = el.iconName || ''
+  const name = raw.includes(':') ? raw : (raw ? `mdi:${raw}` : 'mdi:square-outline')
+  const color = encodeURIComponent(s.color || '#222222')
   const size = el.iconSize && el.iconSize > 0 ? el.iconSize : Math.min(el.width, el.height)
-  return `<iconify-icon icon="${escape(name)}" width="${size}" height="${size}" style="color:${color}"></iconify-icon>`
+  const [prefix, ...rest] = name.split(':')
+  const iconId = rest.join(':')
+  return `<img src="https://api.iconify.design/${prefix}/${iconId}.svg?color=${color}" width="${size}" height="${size}" alt="${escape(name)}" style="display:block" />`
 }
-
-const ICONIFY_SCRIPT = `<script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"><\/script>`
 
 function renderIcon(el: CmsRenderElement): string {
   const s = el.styles
-  return `<div ${dbg(el)} style="${commonBoxStyle(el)};display:flex;align-items:center;justify-content:center;opacity:${s.opacity ?? 1};border-radius:${borderRadiusCss(s.borderRadius)}">${iconImgHtml(el)}</div>`
+  return `<div ${dbg(el)} style="${commonBoxStyle(el)};display:flex;align-items:center;justify-content:center;color:${s.color || 'currentColor'};opacity:${s.opacity ?? 1};border-radius:${borderRadiusCss(s.borderRadius)}">${iconImgHtml(el)}</div>`
 }
 
 function flowRenderIcon(el: CmsRenderElement, mt: number, cw: number): string {
   const s = el.styles
-  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)};display:flex;align-items:center;justify-content:center;opacity:${s.opacity ?? 1};border-radius:${borderRadiusCss(s.borderRadius)}">${iconImgHtml(el)}</div>`
+  return `<div ${dbg(el)} style="${flowWrap(el, mt, cw)};display:flex;align-items:center;justify-content:center;color:${s.color || 'currentColor'};opacity:${s.opacity ?? 1};border-radius:${borderRadiusCss(s.borderRadius)}">${iconImgHtml(el)}</div>`
 }
 
 const RENDERERS: Record<string, (el: CmsRenderElement, childRender?: string) => string> = {
@@ -411,8 +412,7 @@ export function renderHtml(payload: RenderPayload): string {
     body += renderNode(element)
   }
 
-  const hasIcons = els.some((e) => e.type === 'icon' || e.iconName)
-  return `${hasIcons ? ICONIFY_SCRIPT : ''}<div class="content-render" style="position:relative;width:${w}px;height:${minHeight}px;background:white;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${body}</div>`
+  return `<div class="content-render" style="position:relative;width:${w}px;height:${minHeight}px;background:white;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${body}</div>`
 }
 
 // ---------------------------------------------------------------------------
@@ -827,7 +827,6 @@ export function renderFlowHtml(payload: RenderPayload): string {
     prevBottom = el.y + flowHeightOf(el)
   }
 
-  const hasIcons = els.some((e) => e.type === 'icon' || e.iconName)
   // `display:flow-root` establishes a BFC — prevents child margins from collapsing into this container
-  return `${hasIcons ? ICONIFY_SCRIPT : ''}<div class="content-render-flow" style="display:flow-root;position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
+  return `<div class="content-render-flow" style="display:flow-root;position:relative;width:${canvasW}px;max-width:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${parts.join('\n')}</div>`
 }

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
 import type { CSSProperties } from 'vue'
-import { Icon } from '@iconify/vue'
 import { useCms } from '../composables/useCms'
 import { textStrokeStyle } from '../composables/textStroke'
 import { paddingValue } from '../composables/styleHelpers'
 import { borderRadiusCss } from '../composables/useBorderRadius'
 import { fontStack } from '../composables/fontFamilies'
 import type { CmsElement } from '../types'
+import { useDebouncedIconName } from '@/composables/useDebouncedIconName'
+import { Icon } from '@iconify/vue'
 
 const props = defineProps<{ element: CmsElement; isEditing: boolean }>()
 const cms = useCms()
@@ -49,6 +50,9 @@ const btnStyle = computed<CSSProperties>(() => {
 
 const iconPos = computed(() => props.element.iconPosition ?? 'leading')
 const iconSize = computed(() => props.element.iconSize ?? Math.round((props.element.styles.fontSize ?? 14) * 1.15))
+
+const rawIconName = computed(() => props.element.iconName?.trim() || '')
+const resolvedIconName = useDebouncedIconName(rawIconName)
 
 watch(
   () => props.isEditing,
@@ -108,30 +112,30 @@ function onPaste(e: ClipboardEvent): void {
     @click.prevent="!cms.state.preview && $event.preventDefault()"
   >
     <Icon
-      v-if="element.iconName && iconPos === 'leading'"
-      :icon="element.iconName"
+      v-if="resolvedIconName && iconPos === 'leading'"
+      :icon="resolvedIconName"
       :width="iconSize"
       :height="iconSize"
     />
     <span>{{ element.content }}</span>
     <Icon
-      v-if="element.iconName && iconPos === 'trailing'"
-      :icon="element.iconName"
+      v-if="resolvedIconName && iconPos === 'trailing'"
+      :icon="resolvedIconName"
       :width="iconSize"
       :height="iconSize"
     />
   </a>
   <div v-else :style="btnStyle">
     <Icon
-      v-if="element.iconName && iconPos === 'leading'"
-      :icon="element.iconName"
+      v-if="resolvedIconName && iconPos === 'leading'"
+      :icon="resolvedIconName"
       :width="iconSize"
       :height="iconSize"
     />
     <span>{{ element.content }}</span>
     <Icon
-      v-if="element.iconName && iconPos === 'trailing'"
-      :icon="element.iconName"
+      v-if="resolvedIconName && iconPos === 'trailing'"
+      :icon="resolvedIconName"
       :width="iconSize"
       :height="iconSize"
     />
