@@ -2,6 +2,7 @@ import hljs from 'highlight.js/lib/common'
 import type { CmsElement, ElementStyles } from '../types'
 import { borderRadiusCss } from './useBorderRadius'
 import { fontStack } from './fontFamilies'
+import { renderDataAttributes } from './dataAttributes'
 
 export type CmsRenderElement = CmsElement
 
@@ -35,7 +36,7 @@ function estimatedHeight(el: CmsRenderElement): number {
 
 // Debug attrs shown on every rendered outer div — inspect in devtools
 function dbg(el: CmsRenderElement): string {
-  return `data-cms-type="${el.type}" data-cms-id="${el.id}"${el.name ? ` data-cms-name="${escape(el.name)}"` : ''}`
+  return `data-cms-type="${el.type}" data-cms-id="${el.id}"${el.name ? ` data-cms-name="${escape(el.name)}"` : ''}${renderDataAttributes(el.dataAttributes, escape)}`
 }
 
 function commonBoxStyle(el: CmsRenderElement): string {

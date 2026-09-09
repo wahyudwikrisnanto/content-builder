@@ -6,6 +6,7 @@ import Icon from '../icons/Icon.vue'
 import ColorInput from './ColorInput.vue'
 import SearchableSelect from './SearchableSelect.vue'
 import { FONT_FAMILIES } from '../composables/fontFamilies'
+import { isDataAttributeName, normalizeDataAttributeName } from '../composables/dataAttributes'
 import type {
   ElementType,
   InputType,
@@ -177,6 +178,65 @@ function setPadY(id: string, v: number): void {
   cms.updateStyles(id, { paddingTop: v, paddingBottom: v })
 }
 const padSidesExpanded = ref(false)
+
+const dataAttrKeyDrafts = ref<Record<number, string>>({})
+const dataAttrEntries = computed(() => Object.entries(sel.value?.dataAttributes || {}))
+
+function dataAttrName(key: string): string {
+  return key.startsWith('data-') ? key.slice(5) : key
+}
+
+function dataAttrKeyError(id: string, index: number, name: string): string {
+  if (!name) return ''
+  if (!isDataAttributeName(name)) return 'Use lowercase letters, digits, and hyphens'
+  const key = `data-${name}`
+  const entries = cms.state.elements.find((e) => e.id === id)?.dataAttributes || {}
+  const existingIndex = Object.keys(entries).indexOf(key)
+  return existingIndex !== -1 && existingIndex !== index ? 'Duplicate attribute' : ''
+}
+
+function normalizeDataAttrDraft(index: number, value: string): void {
+  dataAttrKeyDrafts.value[index] = normalizeDataAttributeName(value)
+}
+
+function renameDataAttrKey(id: string, index: number, nextName: string): void {
+  const el = cms.state.elements.find((e) => e.id === id)
+  if (!el) return
+  const entries = Object.entries(el.dataAttributes || {})
+  const [oldKey, value] = entries[index] || []
+  const name = normalizeDataAttributeName(nextName)
+  if (!oldKey || !name || dataAttrKeyError(id, index, name)) return
+  const next: Record<string, string> = {}
+  entries.forEach(([key, attributeValue], i) => {
+    next[i === index ? `data-${name}` : key] = i === index ? value : attributeValue
+  })
+  cms.updateElement(id, { dataAttributes: next })
+  delete dataAttrKeyDrafts.value[index]
+}
+
+function setDataAttrValue(id: string, key: string, value: string): void {
+  const el = cms.state.elements.find((e) => e.id === id)
+  if (!el) return
+  cms.updateElement(id, { dataAttributes: { ...(el.dataAttributes || {}), [key]: value } })
+}
+
+function addDataAttrRow(id: string): void {
+  const el = cms.state.elements.find((e) => e.id === id)
+  if (!el) return
+  const entries = { ...(el.dataAttributes || {}) }
+  let name = 'attr'
+  let n = 0
+  while (`data-${name}` in entries) name = `attr-${++n}`
+  cms.updateElement(id, { dataAttributes: { ...entries, [`data-${name}`]: '' } })
+}
+
+function removeDataAttrRow(id: string, key: string): void {
+  const el = cms.state.elements.find((e) => e.id === id)
+  if (!el?.dataAttributes) return
+  const next = { ...el.dataAttributes }
+  delete next[key]
+  cms.updateElement(id, { dataAttributes: Object.keys(next).length ? next : undefined })
+}
 const radiusCornersExpanded = ref(false)
 
 type RadiusCornerKey =
@@ -349,6 +409,44 @@ const headerLabel = computed(() => {
           @input="upd(sel.id, 'name', targetValue($event))"
         />
       </div>
+    </div>
+
+    <div class="prop-section">
+      <div class="prop-section-title prop-section-title--actions">
+        <span>Data attributes</span>
+        <button class="icon-btn prop-section-action" title="Add attribute" @mousedown.stop.prevent @click.stop.prevent="addDataAttrRow(sel.id)">
+          <Icon name="plus" :size="13" />
+        </button>
+      </div>
+      <div
+        v-for="([key, value], i) in dataAttrEntries"
+        :key="key"
+        class="prop-row"
+        :style="{ gap: '6px' }"
+      >
+        <input
+          class="prop-input"
+          type="text"
+          :value="dataAttrKeyDrafts[i] ?? dataAttrName(key)"
+          placeholder="attribute-name"
+          :title="dataAttrKeyError(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key)) || undefined"
+          :style="dataAttrKeyError(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key)) ? { borderColor: '#ef4444' } : undefined"
+          @input="normalizeDataAttrDraft(i, targetValue($event))"
+          @change="renameDataAttrKey(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key))"
+          @keydown.enter="renameDataAttrKey(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key))"
+        />
+        <input
+          class="prop-input"
+          type="text"
+          :value="value"
+          placeholder="value"
+          @input="setDataAttrValue(sel.id, key, targetValue($event))"
+        />
+        <button class="icon-btn prop-section-action" title="Remove attribute" @click.stop.prevent="removeDataAttrRow(sel.id, key)">
+          <Icon name="trash" :size="13" />
+        </button>
+      </div>
+      <div class="prop-hint">Emitted as HTML data-* attributes · reserved data-cms-* names are blocked</div>
     </div>
 
     <div class="prop-section">

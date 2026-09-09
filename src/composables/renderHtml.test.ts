@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { renderHtml, renderFlowHtml } from './renderHtml'
+import { renderCKEditorHtml } from './renderCKEditor'
 import type { CmsRenderElement } from './renderHtml'
 
 function frame(overrides: Partial<CmsRenderElement> = {}): CmsRenderElement {
@@ -57,5 +58,41 @@ describe('renderFlowHtml — nested position calc', () => {
       elements: [frame(), child()],
     })
     expect(html).toContain('margin-left:16px')
+  })
+})
+
+describe('data attributes', () => {
+  it('renders valid attributes on the outer absolute wrapper and escapes values', () => {
+    const html = renderHtml({
+      canvas: { width: 800, height: 600 },
+      elements: [child({ parentId: null, dataAttributes: { 'data-testid': 'a"b&c', 'data-user-id': '42' } })],
+    })
+    expect(html).toContain('data-testid="a&quot;b&amp;c"')
+    expect(html).toContain('data-user-id="42"')
+    expect(html).toMatch(/<div data-cms-type="image"[^>]*data-testid=/)
+  })
+
+  it('renders attributes in flow output and omits invalid or reserved keys', () => {
+    const html = renderFlowHtml({
+      canvas: { width: 800, height: 600 },
+      elements: [child({ parentId: null, dataAttributes: {
+        'data-testid': 'flow',
+        'data-Bad': 'no',
+        'data-cms-id': 'spoof',
+        'data-code-copy': 'spoof',
+      } })],
+    })
+    expect(html).toContain('data-testid="flow"')
+    expect(html).not.toContain('data-Bad=')
+    expect(html).not.toContain('data-cms-id="spoof"')
+    expect(html).not.toContain('data-code-copy="spoof"')
+  })
+
+  it('carries attributes onto CKEditor semantic roots', () => {
+    const html = renderCKEditorHtml({
+      canvas: { width: 800, height: 600 },
+      elements: [child({ type: 'text', content: 'Hello', parentId: null, dataAttributes: { 'data-testid': 'cta' } })],
+    })
+    expect(html).toContain('data-testid="cta"')
   })
 })

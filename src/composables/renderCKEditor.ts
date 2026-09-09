@@ -2,6 +2,7 @@ import hljs from 'highlight.js/lib/common'
 import type { CmsElement } from '../types'
 import type { RenderPayload } from './renderHtml'
 import { borderRadiusCss } from './useBorderRadius'
+import { renderDataAttributes } from './dataAttributes'
 
 /**
  * Convert design payload to CKEditor-compatible semantic HTML.
@@ -68,7 +69,7 @@ function renderText(el: CmsElement): string {
       .split('\n')
       .map((l) => `<li>${escape(l)}</li>`)
       .join('')
-    return `<${tag}${styleAttr}>${inner}</${tag}>`
+    return `<${tag}${styleAttr}${renderDataAttributes(el.dataAttributes, escape)}>${inner}</${tag}>`
   }
   const tag = headingTagFor(el.styles.fontSize, el.styles.fontWeight)
   const fs = el.styles.fontSize
@@ -80,13 +81,13 @@ function renderText(el: CmsElement): string {
     extraStyle.length || styleAttr
       ? ` style="${[...extraStyle, ...(styleAttr.match(/style="([^"]+)"/)?.[1].split(';') ?? [])].filter(Boolean).join(';')}"`
       : ''
-  return `<${tag}${combined}>${renderTextLines(el.content)}</${tag}>`
+  return `<${tag}${combined}${renderDataAttributes(el.dataAttributes, escape)}>${renderTextLines(el.content)}</${tag}>`
 }
 
 function renderImage(el: CmsElement): string {
   if (!el.content) return ''
   const radius = el.styles.borderRadius ? ` style="border-radius:${borderRadiusCss(el.styles.borderRadius)}"` : ''
-  return `<figure class="image"><img src="${escape(el.content)}" alt=""${radius}></figure>`
+  return `<figure class="image"${renderDataAttributes(el.dataAttributes, escape)}><img src="${escape(el.content)}" alt=""${radius}></figure>`
 }
 
 function renderShape(el: CmsElement): string {
@@ -109,7 +110,7 @@ function renderShape(el: CmsElement): string {
   ]
     .filter(Boolean)
     .join(';')
-  return `<div style="${styleParts}">${inner}</div>`
+  return `<div${renderDataAttributes(el.dataAttributes, escape)} style="${styleParts}">${inner}</div>`
 }
 
 function renderVideo(el: CmsElement): string {
@@ -118,11 +119,11 @@ function renderVideo(el: CmsElement): string {
   if (src.includes('youtube.com/watch')) src = src.replace('watch?v=', 'embed/')
   if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/')
   // CKEditor media embed plugin renders as <figure class="media"><oembed url="..."></oembed></figure>
-  return `<figure class="media"><oembed url="${escape(src)}"></oembed></figure>`
+  return `<figure class="media"${renderDataAttributes(el.dataAttributes, escape)}><oembed url="${escape(src)}"></oembed></figure>`
 }
 
-function renderDivider(): string {
-  return `<hr>`
+function renderDivider(el: CmsElement): string {
+  return `<hr${renderDataAttributes(el.dataAttributes, escape)}>`
 }
 
 function renderContainer(el: CmsElement, inner: string): string {
@@ -137,11 +138,11 @@ function renderContainer(el: CmsElement, inner: string): string {
   ]
     .filter(Boolean)
     .join(';')
-  return `<div${styleParts ? ` style="${styleParts}"` : ''}>${inner}</div>`
+  return `<div${renderDataAttributes(el.dataAttributes, escape)}${styleParts ? ` style="${styleParts}"` : ''}>${inner}</div>`
 }
 
 function renderFrame(el: CmsElement, inner: string): string {
-  return `<section class="frame" aria-label="${escape(el.name || 'Frame')}">${inner}</section>`
+  return `<section class="frame"${renderDataAttributes(el.dataAttributes, escape)} aria-label="${escape(el.name || 'Frame')}">${inner}</section>`
 }
 
 function renderButton(el: CmsElement): string {
@@ -161,17 +162,18 @@ function renderButton(el: CmsElement): string {
     .filter(Boolean)
     .join(';')
   const label = escape(el.content || 'Button')
+  const attrs = renderDataAttributes(el.dataAttributes, escape)
   if (el.href) {
     const target = el.target === '_blank' ? ' target="_blank" rel="noopener noreferrer"' : ''
-    return `<p><a href="${escape(el.href)}"${target} style="${styleParts}">${label}</a></p>`
+    return `<p><a href="${escape(el.href)}"${target} style="${styleParts}"${attrs}>${label}</a></p>`
   }
-  return `<p><a href="#" style="${styleParts}">${label}</a></p>`
+  return `<p><a href="#" style="${styleParts}"${attrs}>${label}</a></p>`
 }
 
 function renderCode(el: CmsElement): string {
   const langRaw = (el.language || 'plaintext').toLowerCase()
   const lang = hljs.getLanguage(langRaw) ? langRaw : 'plaintext'
-  return `<pre><code class="language-${escape(lang)}">${escape(el.content || '')}</code></pre>`
+  return `<pre${renderDataAttributes(el.dataAttributes, escape)}><code class="language-${escape(lang)}">${escape(el.content || '')}</code></pre>`
 }
 
 const RENDERERS: Record<string, (el: CmsElement, children?: string) => string> = {

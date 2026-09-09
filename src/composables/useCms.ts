@@ -3,6 +3,7 @@ import { cmsUid, cloneEl } from './factories'
 import { clampPos, clampSize, maxElementBottom } from './bounds'
 import { renderCKEditorHtml } from './renderCKEditor'
 import { parseCKEditorHtml } from './importCKEditor'
+import { sanitizeDataAttributes } from './dataAttributes'
 import type { CmsElement, CmsState, ElementStyles, Guide, SidebarTab } from '../types'
 
 const HISTORY_MAX = 49
@@ -1042,6 +1043,9 @@ const actions = {
         c.iconName = c.content
         c.content = ''
       }
+      const dataAttributes = sanitizeDataAttributes(c.dataAttributes)
+      if (dataAttributes) c.dataAttributes = dataAttributes
+      else delete c.dataAttributes
       return c
     })
     state.selectedId = null

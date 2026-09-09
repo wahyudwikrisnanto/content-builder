@@ -79,6 +79,7 @@ export interface CmsElement {
   locked: boolean
   parentId?: string | null
   name?: string
+  dataAttributes?: Record<string, string>
   language?: string
   href?: string
   target?: '_self' | '_blank'

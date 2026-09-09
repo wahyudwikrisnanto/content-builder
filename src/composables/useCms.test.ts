@@ -173,3 +173,46 @@ describe('exportJson', () => {
     expect(payload.version).toBe(2)
   })
 })
+
+describe('data attributes — JSON round-trip', () => {
+  it('exports and re-imports valid attributes', () => {
+    const el = CmsFactories.text(0, 0)
+    cms.addElement(el)
+    cms.updateElement(el.id, { dataAttributes: { 'data-testid': 'hero' } })
+
+    cms.importJson(cms.exportJson())
+
+    const imported = cms.state.elements.find((e) => e.type === 'text')!
+    expect(imported.dataAttributes).toEqual({ 'data-testid': 'hero' })
+  })
+
+  it('filters invalid, reserved, and non-string entries on import', () => {
+    const el = CmsFactories.text(0, 0)
+    cms.addElement(el)
+    cms.updateElement(el.id, { dataAttributes: { 'data-testid': 'ok' } })
+
+    const payload = JSON.parse(cms.exportJson())
+    payload.elements[0].dataAttributes = {
+      'data-testid': 'ok',
+      'data-Bad Key': 'no',
+      'data-cms-id': 'spoof',
+      'data-code-copy': 'spoof',
+      'data-count': 42,
+    }
+    cms.importJson(JSON.stringify(payload))
+
+    const imported = cms.state.elements.find((e) => e.type === 'text')!
+    expect(imported.dataAttributes).toEqual({ 'data-testid': 'ok' })
+  })
+
+  it('drops the field entirely when no entry survives import', () => {
+    const el = CmsFactories.text(0, 0)
+    el.dataAttributes = { 'data-Bad Key': 'no' }
+    cms.addElement(el)
+
+    cms.importJson(cms.exportJson())
+
+    const imported = cms.state.elements.find((e) => e.type === 'text')!
+    expect(imported.dataAttributes).toBeUndefined()
+  })
+})
