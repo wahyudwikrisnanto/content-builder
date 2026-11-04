@@ -5,6 +5,7 @@ import { CmsFactories } from './factories'
 const cms = useCms()
 
 beforeEach(() => {
+  cms.state.elements.forEach((el) => (el.locked = false))
   cms.deleteAll()
 })
 
@@ -103,6 +104,74 @@ describe('reflowFrame — local coordinates', () => {
   })
 })
 
+describe('moveLayer', () => {
+  it('preserves absolute position when moving a root into a frame', () => {
+    const frame = CmsFactories.frame(100, 80)
+    const el = CmsFactories.text(240, 180)
+    cms.addElement(frame)
+    cms.addElement(el)
+
+    cms.moveLayer(el.id, frame.id, 'inside')
+
+    const moved = cms.state.elements.find((item) => item.id === el.id)!
+    expect(moved.parentId).toBe(frame.id)
+    expect(moved.x).toBe(140)
+    expect(moved.y).toBe(100)
+    expect(cms.absolutePosition(moved)).toEqual({ x: 240, y: 180 })
+  })
+
+  it('preserves absolute position when moving a frame child to root', () => {
+    const frame = CmsFactories.frame(100, 80)
+    const child = CmsFactories.text(30, 40)
+    child.parentId = frame.id
+    const sibling = CmsFactories.text(400, 300)
+    cms.addElement(frame)
+    cms.addElement(child)
+    cms.addElement(sibling)
+
+    cms.moveLayer(child.id, sibling.id, 'before')
+
+    const moved = cms.state.elements.find((item) => item.id === child.id)!
+    expect(moved.parentId).toBeNull()
+    expect(moved.x).toBe(130)
+    expect(moved.y).toBe(120)
+  })
+
+  it('preserves descendant-local coordinates when moving a nested frame', () => {
+    const source = CmsFactories.frame(100, 100)
+    const nested = CmsFactories.frame(20, 30)
+    nested.parentId = source.id
+    const child = CmsFactories.text(5, 6)
+    child.parentId = nested.id
+    const destination = CmsFactories.frame(500, 200)
+    cms.addElement(source)
+    cms.addElement(nested)
+    cms.addElement(child)
+    cms.addElement(destination)
+
+    cms.moveLayer(nested.id, destination.id, 'inside')
+
+    const moved = cms.state.elements.find((item) => item.id === nested.id)!
+    const movedChild = cms.state.elements.find((item) => item.id === child.id)!
+    expect(cms.absolutePosition(moved)).toEqual({ x: 120, y: 130 })
+    expect(movedChild.parentId).toBe(nested.id)
+    expect({ x: movedChild.x, y: movedChild.y }).toEqual({ x: 5, y: 6 })
+  })
+
+  it('rejects moves into a descendant', () => {
+    const frame = CmsFactories.frame(100, 100)
+    const child = CmsFactories.frame(20, 20)
+    child.parentId = frame.id
+    cms.addElement(frame)
+    cms.addElement(child)
+    const before = cms.state.elements.map((el) => ({ ...el }))
+
+    cms.moveLayer(frame.id, child.id, 'inside')
+
+    expect(cms.state.elements).toEqual(before)
+  })
+})
+
 describe('autoReparent — rebases coordinates when entering a frame', () => {
   it('converts a root element\'s absolute position to frame-local on reparent', () => {
     const frame = CmsFactories.frame(100, 100) // absolute box: x 100..500, y 100..400
@@ -164,6 +233,85 @@ describe('moveMany — excludes a selected descendant of another selected elemen
     expect(movedOuter.y).toBe(150) // 100 + 50
     expect(movedGrandchild.x).toBe(5) // stayed at original position: carried by outerFrame through innerFrame
     expect(movedGrandchild.y).toBe(5)
+  })
+})
+
+describe('selection and context actions', () => {
+  it('clears stale multi-selection when selecting all', () => {
+    const first = CmsFactories.text(0, 0)
+    const second = CmsFactories.text(100, 0)
+    cms.addElement(first)
+    cms.addElement(second)
+    cms.setSelectedIds([first.id, second.id])
+
+    cms.selectAll()
+
+    expect(cms.state.allSelected).toBe(true)
+    expect(cms.state.selectedIds).toEqual([])
+  })
+
+  it('keeps locked elements safe from destructive actions', () => {
+    const locked = CmsFactories.text(0, 0)
+    locked.locked = true
+    cms.addElement(locked)
+    cms.select(locked.id)
+
+    cms.duplicate(locked.id)
+    cms.deleteElement(locked.id)
+
+    expect(cms.state.elements.map((el) => el.id)).toEqual([locked.id])
+    expect(cms.state.selectedId).toBe(locked.id)
+  })
+
+  it('groups without changing absolute positions', () => {
+    const first = CmsFactories.text(100, 120)
+    const second = CmsFactories.text(300, 220)
+    cms.addElement(first)
+    cms.addElement(second)
+    cms.setSelectedIds([first.id, second.id])
+
+    cms.groupSelection()
+
+    const frame = cms.state.elements.find((el) => el.id === cms.state.selectedId)!
+    const groupedFirst = cms.state.elements.find((el) => el.id === first.id)!
+    const groupedSecond = cms.state.elements.find((el) => el.id === second.id)!
+    expect(frame.type).toBe('frame')
+    expect(cms.absolutePosition(groupedFirst)).toEqual({ x: 100, y: 120 })
+    expect(cms.absolutePosition(groupedSecond)).toEqual({ x: 300, y: 220 })
+  })
+
+  it('ungroups into the original parent without changing absolute positions', () => {
+    const parent = CmsFactories.frame(50, 60)
+    const group = CmsFactories.frame(100, 120)
+    group.parentId = parent.id
+    const child = CmsFactories.text(20, 30)
+    child.parentId = group.id
+    cms.addElement(parent)
+    cms.addElement(group)
+    cms.addElement(child)
+    const before = cms.absolutePosition(child)
+
+    cms.ungroupFrame(group.id)
+
+    const ungrouped = cms.state.elements.find((el) => el.id === child.id)!
+    expect(ungrouped.parentId).toBe(parent.id)
+    expect(cms.absolutePosition(ungrouped)).toEqual(before)
+  })
+
+  it('reorders a frame and descendants as one block', () => {
+    const first = CmsFactories.frame(0, 0)
+    const child = CmsFactories.text(10, 10)
+    child.parentId = first.id
+    const second = CmsFactories.text(500, 0)
+    cms.addElement(first)
+    cms.addElement(child)
+    cms.addElement(second)
+
+    cms.bringForward(first.id)
+
+    expect(cms.state.elements.map((el) => el.id)).toEqual([second.id, first.id, child.id])
+    cms.sendBackward(first.id)
+    expect(cms.state.elements.map((el) => el.id)).toEqual([first.id, child.id, second.id])
   })
 })
 

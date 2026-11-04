@@ -411,9 +411,10 @@ const actions = {
   },
   deleteElement(id: string | null): void {
     if (!id) return
-    snapshot()
     const target = state.elements.find((e) => e.id === id)
-    const parentId = target?.parentId ?? null
+    if (!target || target.locked) return
+    snapshot()
+    const parentId = target.parentId ?? null
     const kill = new Set<string>([id, ...collectDescendantIds(id, state.elements)])
     state.elements = state.elements.filter((e) => !kill.has(e.id))
     if (state.selectedId && kill.has(state.selectedId)) state.selectedId = null
@@ -436,24 +437,31 @@ const actions = {
   },
   deleteSelected(): void {
     if (!state.selectedIds.length) return
+    const selected = state.elements.filter((e) => state.selectedIds.includes(e.id))
+    if (selected.length !== state.selectedIds.length || selected.some((e) => e.locked)) return
     snapshot()
     const kill = new Set<string>(
       state.selectedIds.flatMap((id) => [id, ...collectDescendantIds(id, state.elements)]),
+    )
+    const affectedParents = new Set(
+      selected.map((e) => e.parentId).filter((id): id is string => !!id && !kill.has(id)),
     )
     state.elements = state.elements.filter((e) => !kill.has(e.id))
     state.selectedIds = []
     state.selectedId = null
     state.editingTextId = null
     state.guides = []
+    affectedParents.forEach((id) => reflowFrame(id))
   },
   selectAll(): void {
     if (!state.elements.length) return
     state.allSelected = true
     state.selectedId = null
+    state.selectedIds = []
     state.editingTextId = null
   },
   deleteAll(): void {
-    if (!state.elements.length) return
+    if (!state.elements.length || state.elements.some((e) => e.locked)) return
     snapshot()
     state.elements = []
     state.selectedId = null
@@ -472,6 +480,7 @@ const actions = {
     const i = findIdx(id)
     if (i < 0) return
     const el = state.elements[i]
+    if (el.locked) return
     if (el.responsive) x = 0
     let c = clampPos(
       { x, y, width: el.width, height: el.height },
@@ -483,19 +492,7 @@ const actions = {
       const clamped = clampInsideParent(el, { x: c.x, y: c.y })
       c = { ...c, x: clamped.x, y: clamped.y }
     }
-    const dx = c.x - el.x,
-      dy = c.y - el.y
     state.elements[i] = { ...el, x: c.x, y: c.y }
-    // Move descendants with frame
-    if (el.type === 'frame' && (dx || dy)) {
-      const descendants = collectDescendantIds(id, state.elements)
-      for (const did of descendants) {
-        const j = findIdx(did)
-        if (j < 0) continue
-        const d = state.elements[j]
-        state.elements[j] = { ...d, x: d.x + dx, y: d.y + dy }
-      }
-    }
   },
   /**
    * Set positions of many elements from absolute (originalX + dx, originalY + dy).
@@ -523,6 +520,7 @@ const actions = {
       return false
     }
     const ownership = new Set<string>(ids.filter((id) => !isCarriedByAnotherSelected(id)))
+    if ([...ownership].some((id) => state.elements.find((el) => el.id === id)?.locked)) return
     // Compute the group's original bounding box from originals + current sizes
     let minX = Infinity,
       minY = Infinity,
@@ -562,23 +560,32 @@ const actions = {
     const els = state.elements
     const src = els.find((e) => e.id === id)
     const dst = els.find((e) => e.id === targetId)
-    if (!src || !dst) return
+    if (!src || !dst || src.locked) return
     // Disallow dropping onto own descendant
     const descendants = new Set(collectDescendantIds(id, els))
     if (descendants.has(targetId)) return
 
-    snapshot()
-
     const newParentId =
       position === 'inside' ? (dst.type === 'frame' ? dst.id : null) : (dst.parentId ?? null)
+    if (position === 'inside' && dst.type !== 'frame') return
+
+    snapshot()
+    const absolute = absolutePosition(src)
+    const newParent = newParentId ? els.find((e) => e.id === newParentId) : undefined
+    const newOrigin = newParent ? absolutePosition(newParent) : { x: 0, y: 0 }
 
     // Remove src + descendants block (preserve their order)
     const blockIds = [id, ...collectDescendantIds(id, els)]
     const block = blockIds.map((bid) => els.find((e) => e.id === bid)!).filter(Boolean)
     const rest = els.filter((e) => !blockIds.includes(e.id))
 
-    // Update src parentId
-    const updatedSrc = { ...src, parentId: newParentId }
+    // Rebase the moved root into its new parent's local coordinates.
+    const updatedSrc = {
+      ...src,
+      parentId: newParentId,
+      x: absolute.x - newOrigin.x,
+      y: absolute.y - newOrigin.y,
+    }
     const updatedBlock = [updatedSrc, ...block.slice(1)]
 
     // Insert relative to target
@@ -614,7 +621,7 @@ const actions = {
   },
   reparent(id: string, parentId: string | null, opts: { noHistory?: boolean } = {}): void {
     const i = findIdx(id)
-    if (i < 0) return
+    if (i < 0 || state.elements[i].locked) return
     if (!opts.noHistory) snapshot()
     state.elements[i] = { ...state.elements[i], parentId }
   },
@@ -624,21 +631,27 @@ const actions = {
    * Only top-level members of selectedIds become children — nested ids stay under their existing parent.
    */
   groupSelection(): void {
-    const ids = state.selectedIds
-    if (ids.length < 2) return
-    const els = ids.map((id) => state.elements.find((e) => e.id === id)).filter(Boolean) as CmsElement[]
-    if (els.length < 2) return
-    // Refuse when selection spans multiple parents — keeps parent-relative layout sane.
-    const parents = new Set(els.map((e) => e.parentId ?? null))
+    const selectedSet = new Set(state.selectedIds)
+    const roots = state.elements.filter((el) => {
+      if (!selectedSet.has(el.id)) return false
+      let parentId = el.parentId
+      while (parentId) {
+        if (selectedSet.has(parentId)) return false
+        parentId = state.elements.find((item) => item.id === parentId)?.parentId ?? null
+      }
+      return true
+    })
+    if (roots.length < 2 || roots.some((el) => el.locked)) return
+    const parents = new Set(roots.map((el) => el.parentId ?? null))
     if (parents.size > 1) return
-    const sharedParent = els[0].parentId ?? null
+    const sharedParent = roots[0].parentId ?? null
 
     snapshot()
     const pad = 8
-    const minX = Math.min(...els.map((e) => e.x)) - pad
-    const minY = Math.min(...els.map((e) => e.y)) - pad
-    const maxX = Math.max(...els.map((e) => e.x + e.width)) + pad
-    const maxY = Math.max(...els.map((e) => e.y + e.height)) + pad
+    const minX = Math.min(...roots.map((el) => el.x)) - pad
+    const minY = Math.min(...roots.map((el) => el.y)) - pad
+    const maxX = Math.max(...roots.map((el) => el.x + el.width)) + pad
+    const maxY = Math.max(...roots.map((el) => el.y + el.height)) + pad
     const frame: CmsElement = {
       id: cmsUid(),
       type: 'frame',
@@ -659,19 +672,24 @@ const actions = {
       visible: true,
       locked: false,
     }
-    const idSet = new Set(ids)
-    // Insert frame just before the first grouped element, then reparent them.
-    const firstIdx = state.elements.findIndex((e) => idSet.has(e.id))
-    const next = state.elements.map((e) => (idSet.has(e.id) ? { ...e, parentId: frame.id } : e))
+    const rootIds = new Set(roots.map((el) => el.id))
+    const firstIdx = state.elements.findIndex((el) => rootIds.has(el.id))
+    const next = state.elements.map((el) =>
+      rootIds.has(el.id)
+        ? { ...el, parentId: frame.id, x: el.x - frame.x, y: el.y - frame.y }
+        : el,
+    )
     next.splice(firstIdx, 0, frame)
     state.elements = next
     state.selectedIds = []
     state.selectedId = frame.id
+    if (sharedParent) reflowFrame(sharedParent)
   },
   autoReparent(id: string): void {
     const i = findIdx(id)
     if (i < 0) return
     const el = state.elements[i]
+    if (el.locked) return
     // descendants includes id itself so a frame can't be nested in its own subtree
     const descendants = new Set([id, ...collectDescendantIds(id, state.elements)])
     const absEl = absolutePosition(el)
@@ -711,15 +729,29 @@ const actions = {
     }
   },
   ungroupFrame(frameId: string): void {
+    const frame = state.elements.find((el) => el.id === frameId)
+    if (!frame || frame.type !== 'frame' || frame.locked) return
+    const parent = frame.parentId ? state.elements.find((el) => el.id === frame.parentId) : undefined
+    const parentOrigin = parent ? absolutePosition(parent) : { x: 0, y: 0 }
     snapshot()
     state.elements = state.elements
-      .map((el) => (el.parentId === frameId ? { ...el, parentId: null } : el))
+      .map((el) => {
+        if (el.parentId !== frameId) return el
+        const absolute = absolutePosition(el)
+        return {
+          ...el,
+          parentId: frame.parentId ?? null,
+          x: absolute.x - parentOrigin.x,
+          y: absolute.y - parentOrigin.y,
+        }
+      })
       .filter((el) => el.id !== frameId)
     if (state.selectedId === frameId) state.selectedId = null
+    if (frame.parentId) reflowFrame(frame.parentId)
   },
   resize(id: string, x: number, y: number, w: number, h: number): void {
     const i = findIdx(id)
-    if (i < 0) return
+    if (i < 0 || state.elements[i].locked) return
     const c = clampSize(
       { x, y, width: w, height: h },
       state.canvasWidth,
@@ -740,36 +772,58 @@ const actions = {
     state.future = []
   },
   bringForward(id: string): void {
-    const i = findIdx(id)
-    if (i < 0) return
-    const el = state.elements[i]
-    // Swap with the next element that shares the same parent — a blind i+1 swap could cross
-    // into a different frame's children (or the top level), corrupting both groups' order.
-    let j = i + 1
-    while (j < state.elements.length && state.elements[j].parentId !== el.parentId) j++
-    if (j >= state.elements.length) return
+    const el = state.elements.find((item) => item.id === id)
+    if (!el || el.locked) return
+    const siblings = state.elements.filter(
+      (item) => (item.parentId ?? null) === (el.parentId ?? null),
+    )
+    const index = siblings.findIndex((item) => item.id === id)
+    const adjacent = siblings[index + 1]
+    if (!adjacent) return
+    const targetIds = new Set([id, ...collectDescendantIds(id, state.elements)])
+    const adjacentIds = new Set([
+      adjacent.id,
+      ...collectDescendantIds(adjacent.id, state.elements),
+    ])
+    const slots = state.elements
+      .map((item, slot) => (targetIds.has(item.id) || adjacentIds.has(item.id) ? slot : -1))
+      .filter((slot) => slot >= 0)
+    const targetBlock = state.elements.filter((item) => targetIds.has(item.id))
+    const adjacentBlock = state.elements.filter((item) => adjacentIds.has(item.id))
     snapshot()
-    const els = [...state.elements]
-    ;[els[i], els[j]] = [els[j], els[i]]
-    state.elements = els
+    const next = [...state.elements]
+    ;[...adjacentBlock, ...targetBlock].forEach((item, slot) => (next[slots[slot]] = item))
+    state.elements = next
     if (el.parentId) reflowFrame(el.parentId)
   },
   sendBackward(id: string): void {
-    const i = findIdx(id)
-    if (i < 0) return
-    const el = state.elements[i]
-    let j = i - 1
-    while (j >= 0 && state.elements[j].parentId !== el.parentId) j--
-    if (j < 0) return
+    const el = state.elements.find((item) => item.id === id)
+    if (!el || el.locked) return
+    const siblings = state.elements.filter(
+      (item) => (item.parentId ?? null) === (el.parentId ?? null),
+    )
+    const index = siblings.findIndex((item) => item.id === id)
+    const adjacent = siblings[index - 1]
+    if (!adjacent) return
+    const targetIds = new Set([id, ...collectDescendantIds(id, state.elements)])
+    const adjacentIds = new Set([
+      adjacent.id,
+      ...collectDescendantIds(adjacent.id, state.elements),
+    ])
+    const slots = state.elements
+      .map((item, slot) => (targetIds.has(item.id) || adjacentIds.has(item.id) ? slot : -1))
+      .filter((slot) => slot >= 0)
+    const targetBlock = state.elements.filter((item) => targetIds.has(item.id))
+    const adjacentBlock = state.elements.filter((item) => adjacentIds.has(item.id))
     snapshot()
-    const els = [...state.elements]
-    ;[els[i], els[j]] = [els[j], els[i]]
-    state.elements = els
+    const next = [...state.elements]
+    ;[...targetBlock, ...adjacentBlock].forEach((item, slot) => (next[slots[slot]] = item))
+    state.elements = next
     if (el.parentId) reflowFrame(el.parentId)
   },
   duplicate(id: string): void {
     const root = state.elements.find((e) => e.id === id)
-    if (!root) return
+    if (!root || root.locked) return
 
     snapshot()
 
@@ -834,16 +888,18 @@ const actions = {
   toggleVisible(id: string): void {
     const i = findIdx(id)
     if (i < 0) return
+    snapshot()
     state.elements[i] = { ...state.elements[i], visible: !state.elements[i].visible }
   },
   toggleLock(id: string): void {
     const i = findIdx(id)
     if (i < 0) return
+    snapshot()
     state.elements[i] = { ...state.elements[i], locked: !state.elements[i].locked }
   },
   toggleResponsive(id: string): void {
     const i = findIdx(id)
-    if (i < 0) return
+    if (i < 0 || state.elements[i].locked) return
     snapshot()
     const el = state.elements[i]
     const next = !el.responsive

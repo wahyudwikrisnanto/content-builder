@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import './style.css'
+import './layout.css'
 import { useCms } from './composables/useCms'
 import { useModifierKeys } from './composables/useModifierKeys'
 import { parseCKEditorHtml } from './composables/importCKEditor'
@@ -26,6 +27,7 @@ const emit = defineEmits<{
 }>()
 
 const cms = useCms()
+const rootRef = ref<HTMLElement | null>(null)
 useModifierKeys()
 providePlugins(props.plugins ?? [])
 provideBuilderConfig(props.config)
@@ -51,6 +53,29 @@ function htmlToJson(html: string, width?: number): string {
 
 defineExpose({ htmlToJson })
 
+function syncFullscreen(): void {
+  cms.state.fullscreen = document.fullscreenElement === rootRef.value
+}
+
+async function toggleFullscreen(): Promise<void> {
+  const root = rootRef.value
+  if (!root) return
+  if (!root.requestFullscreen || !document.exitFullscreen) {
+    cms.toggleFullscreen()
+    return
+  }
+  try {
+    if (document.fullscreenElement === root) await document.exitFullscreen()
+    else await root.requestFullscreen()
+  } catch {
+    syncFullscreen()
+  }
+}
+
+function exitOwnedFullscreen(): void {
+  if (document.fullscreenElement === rootRef.value) void document.exitFullscreen()
+}
+
 // Load initial content once on mount
 onMounted(() => {
   // Apply canvas height mode from config before loading content
@@ -67,9 +92,14 @@ onMounted(() => {
     if (defaultPreset) cms.setCanvas(defaultPreset.w, defaultPreset.h)
   }
   window.addEventListener('keydown', onKey)
+  document.addEventListener('fullscreenchange', syncFullscreen)
 })
 
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+onUnmounted(() => {
+  exitOwnedFullscreen()
+  window.removeEventListener('keydown', onKey)
+  document.removeEventListener('fullscreenchange', syncFullscreen)
+})
 
 // Sync external modelValue → internal state (e.g. parent replaces content)
 watch(modelValue, (val) => {
@@ -118,7 +148,7 @@ function onKey(e: KeyboardEvent): void {
   }
 
   if (isInput || isCE) {
-    if (e.key === 'Escape' && isCE) (document.activeElement as HTMLElement | null)?.blur()
+    if (e.key === 'Escape') (document.activeElement as HTMLElement | null)?.blur()
     return
   }
   if (e.key === 'a' && mod) {
@@ -145,8 +175,10 @@ function onKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
     if (cms.state.previewFullscreen) cms.togglePreviewFullscreen()
     else if (cms.state.preview) cms.togglePreview()
-    else if (cms.state.fullscreen) cms.toggleFullscreen()
-    else {
+    else if (cms.state.fullscreen) {
+      if (!document.fullscreenElement) cms.toggleFullscreen()
+      return
+    } else {
       cms.select(null)
       cms.state.allSelected = false
       cms.state.selectedIds = []
@@ -158,20 +190,30 @@ function onKey(e: KeyboardEvent): void {
       cms.duplicate(cms.state.selectedId)
     }
   }
+  if (e.key === 'g' && mod && cms.state.selectedIds.length > 1) {
+    e.preventDefault()
+    cms.groupSelection()
+  }
 }
 </script>
 
 <template>
-  <div :class="['cb-root cb-root-var', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]">
-    <Toolbar v-if="!cms.state.preview || !cms.state.previewFullscreen" />
+  <div
+    ref="rootRef"
+    :class="['cb-root cb-root-var', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]"
+  >
+    <Toolbar
+      v-if="!cms.state.preview || !cms.state.previewFullscreen"
+      @toggle-fullscreen="toggleFullscreen"
+    />
     <div class="main-area">
       <template v-if="cms.state.preview">
         <PreviewView />
       </template>
       <template v-else>
-        <Sidebar v-if="!cms.state.fullscreen && !cms.state.sidebarHidden" />
+        <Sidebar v-if="!cms.state.sidebarHidden" />
         <Canvas />
-        <Properties v-if="!cms.state.fullscreen" />
+        <Properties />
       </template>
     </div>
   </div>

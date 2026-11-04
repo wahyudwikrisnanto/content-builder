@@ -6,6 +6,8 @@ import Icon from '../icons/Icon.vue'
 import ImportModal from './ImportModal.vue'
 import type { CanvasPreset } from '../types'
 
+const emit = defineEmits<{ toggleFullscreen: [] }>()
+
 const cms = useCms()
 const config = useBuilderConfig()
 const showPresets = ref(false)
@@ -191,8 +193,8 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
       </button>
       <button
         :class="['icon-btn', { 'icon-btn-active': cms.state.fullscreen }]"
-        @click="cms.toggleFullscreen()"
-        :title="cms.state.fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen canvas'"
+        @click="emit('toggleFullscreen')"
+        :title="cms.state.fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen window'"
       >
         <Icon :name="cms.state.fullscreen ? 'minimize' : 'maximize'" :size="17" />
       </button>

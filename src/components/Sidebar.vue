@@ -31,6 +31,10 @@ const visibleTabs = computed<Tab[]>(() =>
   })),
 )
 
+const activeTabLabel = computed(
+  () => visibleTabs.value.find((tab) => tab.id === cms.state.sidebarTab)?.label ?? '',
+)
+
 const TYPE_ICON: Record<ElementType, string> = {
   text: 'type',
   image: 'image',
@@ -81,7 +85,11 @@ const TEXT_PRESETS: TextPreset[] = [
 interface LayerNode {
   el: CmsElement
   depth: number
+  hasChildren: boolean
 }
+
+const collapsedIds = ref<string[]>([])
+const selectionAnchor = ref<string | null>(null)
 
 const layerTree = computed<LayerNode[]>(() => {
   const els = cms.state.elements
@@ -98,13 +106,45 @@ const layerTree = computed<LayerNode[]>(() => {
     // reverse so topmost (highest index) shown first
     for (let i = children.length - 1; i >= 0; i--) {
       const c = children[i]
-      out.push({ el: c, depth })
-      walk(c.id, depth + 1)
+      const hasChildren = (byParent.get(c.id)?.length ?? 0) > 0
+      out.push({ el: c, depth, hasChildren })
+      if (!collapsedIds.value.includes(c.id)) walk(c.id, depth + 1)
     }
   }
   walk(null, 0)
   return out
 })
+
+function toggleCollapsed(id: string): void {
+  collapsedIds.value = collapsedIds.value.includes(id)
+    ? collapsedIds.value.filter((item) => item !== id)
+    : [...collapsedIds.value, id]
+}
+
+function onLayerClick(e: MouseEvent, id: string): void {
+  const visibleIds = layerTree.value.map((node) => node.el.id)
+  if (e.shiftKey && selectionAnchor.value) {
+    const anchor = visibleIds.indexOf(selectionAnchor.value)
+    const current = visibleIds.indexOf(id)
+    if (anchor >= 0 && current >= 0) {
+      const start = Math.min(anchor, current)
+      const end = Math.max(anchor, current)
+      cms.setSelectedIds(visibleIds.slice(start, end + 1))
+      return
+    }
+  }
+  if (e.ctrlKey || e.metaKey) {
+    const selected = cms.state.selectedId
+      ? [cms.state.selectedId]
+      : [...cms.state.selectedIds]
+    const next = selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]
+    if (next.length === 1) cms.select(next[0])
+    else cms.setSelectedIds(next)
+  } else {
+    cms.select(id)
+  }
+  selectionAnchor.value = id
+}
 
 function layerName(el: CmsElement): string {
   // Explicit user name wins for every element type
@@ -175,6 +215,8 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
         v-for="t in visibleTabs"
         :key="t.id"
         :class="['sidebar-tab', { active: cms.state.sidebarTab === t.id }]"
+        :aria-label="t.label"
+        :data-tooltip="t.label"
         @click="cms.setTab(t.id as SidebarTab)"
       >
         <Icon :name="t.icon" :size="15" />
@@ -183,6 +225,7 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
     </div>
 
     <div class="sidebar-content">
+      <div class="sidebar-content-title">{{ activeTabLabel }}</div>
       <div v-if="cms.state.sidebarTab === 'elements'">
         <div class="element-section">
           <div class="element-section-title">Text</div>
@@ -341,7 +384,8 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
             :class="[
               'layer-item',
               {
-                active: node.el.id === cms.state.selectedId,
+                active:
+                  node.el.id === cms.state.selectedId || cms.state.selectedIds.includes(node.el.id),
                 'drop-before': dropOver?.id === node.el.id && dropOver.pos === 'before',
                 'drop-after': dropOver?.id === node.el.id && dropOver.pos === 'after',
                 'drop-inside': dropOver?.id === node.el.id && dropOver.pos === 'inside',
@@ -350,13 +394,26 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
             ]"
             :style="{ paddingLeft: 10 + node.depth * 14 + 'px' }"
             draggable="true"
-            @click="cms.select(node.el.id)"
+            @click="onLayerClick($event, node.el.id)"
             @dragstart="onLayerDragStart($event, node.el.id)"
             @dragover="onLayerDragOver($event, node.el.id, node.el.type === 'frame')"
             @dragleave="dropOver = null"
             @drop="onLayerDrop($event, node.el.id)"
             @dragend="onLayerDragEnd"
           >
+            <button
+              v-if="node.el.type === 'frame' && node.hasChildren"
+              class="layer-disclosure"
+              type="button"
+              :title="collapsedIds.includes(node.el.id) ? 'Expand frame' : 'Collapse frame'"
+              @click.stop="toggleCollapsed(node.el.id)"
+            >
+              <Icon
+                :name="collapsedIds.includes(node.el.id) ? 'chevron-right' : 'chevron-down'"
+                :size="12"
+              />
+            </button>
+            <span v-else class="layer-disclosure-placeholder"></span>
             <span
               class="layer-item-icon"
               :style="{ opacity: cms.isEffectivelyVisible(node.el.id) ? 1 : 0.3 }"

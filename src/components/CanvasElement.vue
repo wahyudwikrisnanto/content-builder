@@ -23,6 +23,7 @@ import type { CmsElement, ElementType } from '../types'
 import type { Component } from 'vue'
 
 const props = defineProps<{ element: CmsElement }>()
+const emit = defineEmits<{ contextmenu: [event: MouseEvent, id: string] }>()
 const cms = useCms()
 const plugins = usePlugins()
 
@@ -169,8 +170,12 @@ function findTopFrameId(startId: string): string | null {
 
 function onMouseDown(e: MouseEvent): void {
   if (cms.state.preview) return
-  if (props.element.locked || isEditing.value) return
   e.stopPropagation()
+  if (props.element.locked) {
+    cms.select(props.element.id)
+    return
+  }
+  if (isEditing.value) return
 
   // Multi-select drag: if this element is part of a multi-selection, drag the whole group
   if (cms.state.selectedIds.length > 1 && cms.state.selectedIds.includes(props.element.id)) {
@@ -271,6 +276,7 @@ async function onDblClick(): Promise<void> {
       height: element.height + 'px',
     }"
     @mousedown="onMouseDown"
+    @contextmenu.stop.prevent="emit('contextmenu', $event, element.id)"
     @dblclick="onDblClick"
   >
     <!-- Floating frame label — drag handle: select + drag in one motion -->
@@ -307,7 +313,12 @@ async function onDblClick(): Promise<void> {
       }"
     >
       <component :is="activeRenderer" :element="element" :is-editing="isEditing">
-        <CanvasElement v-for="child in children" :key="child.id" :element="child" />
+        <CanvasElement
+          v-for="child in children"
+          :key="child.id"
+          :element="child"
+          @contextmenu="(event, id) => emit('contextmenu', event, id)"
+        />
       </component>
     </div>
     <ResizeHandles

@@ -326,7 +326,7 @@ const headerLabel = computed(() => {
         </button>
       </div>
     </div>
-    <div class="prop-hint">Group wraps selection in a frame · Delete removes all</div>
+    <div class="prop-hint" :style="{ paddingLeft: '12px', marginTop: '12px' }">Group wraps selection in a frame · Delete removes all</div>
   </div>
 
   <div v-else-if="!sel" class="properties">
@@ -549,9 +549,11 @@ const headerLabel = computed(() => {
           :value="sel.styles.fontSize"
           :min="8"
           :max="200"
-          :style="{ width: '64px', flex: 'none' }"
           @input="sty(sel.id, 'fontSize', targetNumber($event))"
         />
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Weight</span>
         <select
           class="prop-select"
           :value="sel.styles.fontWeight"
@@ -575,9 +577,11 @@ const headerLabel = computed(() => {
           :min="0"
           :step="0.5"
           :value="sel.styles.textStrokeWidth ?? 0"
-          :style="{ width: '64px', flex: 'none' }"
           @input="sty(sel.id, 'textStrokeWidth', targetNumber($event))"
         />
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Stroke color</span>
         <ColorInput
           :model-value="sel.styles.textStrokeColor || '#000000'"
           @update:model-value="(v: string) => sty(sel!.id, 'textStrokeColor', v)"

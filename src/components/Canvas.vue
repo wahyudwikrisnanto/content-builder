@@ -3,14 +3,90 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCms } from '../composables/useCms'
 import { CmsFactories } from '../composables/factories'
 import CanvasElement from './CanvasElement.vue'
+import CanvasContextMenu from './CanvasContextMenu.vue'
 import Guides from './Guides.vue'
 import Icon from '../icons/Icon.vue'
 import type { FactoryKey } from '../types'
+import type { ContextMenuItem } from './CanvasContextMenu.vue'
 
 const cms = useCms()
 const canvasRef = ref<HTMLDivElement | null>(null)
 const scrollRef = ref<HTMLDivElement | null>(null)
 const dragOver = ref(false)
+const contextMenu = ref<{ x: number; y: number; targetId: string | null } | null>(null)
+
+const contextItems = computed<ContextMenuItem[]>(() => {
+  const menu = contextMenu.value
+  if (!menu) return []
+  if (!menu.targetId) {
+    const targetId = cms.state.selectedId ?? cms.state.selectedIds[0] ?? null
+    return [
+      ...(targetId ? [{ id: 'clear-selection', label: 'Clear selection', shortcut: 'Esc' }] : []),
+      ...(cms.state.elements.length
+        ? [{ id: 'select-all', label: 'Select all', shortcut: 'Ctrl A' }]
+        : []),
+    ]
+  }
+  const target = cms.state.elements.find((el) => el.id === menu.targetId)
+  if (!target) return []
+  const multi = cms.state.selectedIds.length > 1
+  const selected = multi
+    ? cms.state.elements.filter((el) => cms.state.selectedIds.includes(el.id))
+    : [target]
+  const selectedIds = new Set(selected.map((el) => el.id))
+  const hasNestedSelection = selected.some((el) => {
+    let parentId = el.parentId
+    while (parentId) {
+      if (selectedIds.has(parentId)) return true
+      parentId = cms.state.elements.find((item) => item.id === parentId)?.parentId
+    }
+    return false
+  })
+  const hasLocked = selected.some((el) => el.locked)
+  const canGroup =
+    multi &&
+    !hasLocked &&
+    !hasNestedSelection &&
+    new Set(selected.map((el) => el.parentId ?? null)).size === 1
+  const siblings = cms.state.elements.filter(
+    (el) => (el.parentId ?? null) === (target.parentId ?? null),
+  )
+  const siblingIndex = siblings.findIndex((el) => el.id === target.id)
+  return [
+    { id: 'duplicate', label: 'Duplicate', shortcut: 'Ctrl D', disabled: multi || target.locked },
+    ...(target.type === 'frame' && !multi
+      ? [{ id: 'ungroup', label: 'Ungroup', disabled: target.locked }]
+      : multi
+        ? [{ id: 'group', label: 'Group selection', shortcut: 'Ctrl G', disabled: !canGroup }]
+        : []),
+    {
+      id: 'bring-forward',
+      label: 'Bring forward',
+      separator: true,
+      disabled: multi || target.locked || siblingIndex === siblings.length - 1,
+    },
+    {
+      id: 'send-backward',
+      label: 'Send backward',
+      disabled: multi || target.locked || siblingIndex <= 0,
+    },
+    {
+      id: 'responsive',
+      label: target.responsive ? 'Exit full width' : 'Stretch to full width',
+      disabled: multi || target.locked,
+    },
+    { id: 'visible', label: target.visible ? 'Hide' : 'Show', separator: true, disabled: multi },
+    { id: 'lock', label: target.locked ? 'Unlock' : 'Lock', disabled: multi },
+    {
+      id: 'delete',
+      label: 'Delete',
+      shortcut: 'Delete',
+      danger: true,
+      separator: true,
+      disabled: hasLocked,
+    },
+  ]
+})
 
 // Marquee in viewport (client) coords — rendered as position:fixed
 const marquee = ref<{ cx1: number; cy1: number; cx2: number; cy2: number } | null>(null)
@@ -104,13 +180,23 @@ function onScrollMouseDown(e: MouseEvent): void {
       const ry1 = (Math.min(cy1, cy2) - canvasRect.top) / z
       const rx2 = (Math.max(cx1, cx2) - canvasRect.left) / z
       const ry2 = (Math.max(cy1, cy2) - canvasRect.top) / z
-      const hits = cms.state.elements
-        .filter((el) => {
-          if (!cms.isEffectivelyVisible(el.id)) return false
-          const abs = cms.absolutePosition(el)
-          return abs.x < rx2 && abs.x + el.width > rx1 && abs.y < ry2 && abs.y + el.height > ry1
-        })
-        .map((el) => el.id)
+      const hitSet = new Set(
+        cms.state.elements
+          .filter((el) => {
+            if (!cms.isEffectivelyVisible(el.id)) return false
+            const abs = cms.absolutePosition(el)
+            return abs.x < rx2 && abs.x + el.width > rx1 && abs.y < ry2 && abs.y + el.height > ry1
+          })
+          .map((el) => el.id),
+      )
+      const hits = [...hitSet].filter((id) => {
+        let parentId = cms.state.elements.find((el) => el.id === id)?.parentId
+        while (parentId) {
+          if (hitSet.has(parentId)) return false
+          parentId = cms.state.elements.find((el) => el.id === parentId)?.parentId
+        }
+        return true
+      })
       if (hits.length > 1) cms.setSelectedIds(hits)
       else if (hits.length === 1) cms.select(hits[0])
     }
@@ -119,6 +205,65 @@ function onScrollMouseDown(e: MouseEvent): void {
 
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
+}
+
+function openContextMenu(e: MouseEvent, id: string | null): void {
+  if (cms.state.preview) return
+  if (id) {
+    const selected = cms.state.selectedId === id || cms.state.selectedIds.includes(id)
+    if (!selected) {
+      if (e.ctrlKey || e.metaKey) {
+        const current = cms.state.selectedId
+          ? [cms.state.selectedId]
+          : [...cms.state.selectedIds]
+        cms.setSelectedIds([...current, id])
+      } else {
+        cms.select(id)
+      }
+    }
+  } else if (!cms.state.selectedId && !cms.state.selectedIds.length) {
+    cms.select(null)
+  }
+  contextMenu.value = { x: e.clientX, y: e.clientY, targetId: id }
+}
+
+function runContextAction(id: string): void {
+  const targetId = contextMenu.value?.targetId
+  if (id === 'select-all') {
+    cms.selectAll()
+    contextMenu.value = null
+    return
+  }
+  if (id === 'clear-selection') {
+    cms.select(null)
+    contextMenu.value = null
+    return
+  }
+  if (!targetId) {
+    contextMenu.value = null
+    return
+  }
+  const multi = cms.state.selectedIds.length > 1
+  if (id === 'duplicate') cms.duplicate(targetId)
+  else if (id === 'group') cms.groupSelection()
+  else if (id === 'ungroup') cms.ungroupFrame(targetId)
+  else if (id === 'bring-forward') cms.bringForward(targetId)
+  else if (id === 'send-backward') cms.sendBackward(targetId)
+  else if (id === 'responsive') cms.toggleResponsive(targetId)
+  else if (id === 'visible') cms.toggleVisible(targetId)
+  else if (id === 'lock') cms.toggleLock(targetId)
+  else if (id === 'delete') {
+    if (multi) cms.deleteSelected()
+    else cms.deleteElement(targetId)
+  }
+  contextMenu.value = null
+}
+
+function onCanvasContextMenu(e: MouseEvent): void {
+  const target = e.target as HTMLElement
+  if (target.closest('[data-element-id]')) return
+  e.preventDefault()
+  openContextMenu(e, null)
 }
 
 function onClickOutsideWorkspace(e: MouseEvent): void {
@@ -134,7 +279,12 @@ function onClickOutsideWorkspace(e: MouseEvent): void {
 
 <template>
   <div class="workspace">
-    <div class="canvas-scroll" ref="scrollRef" @mousedown="onScrollMouseDown">
+    <div
+      class="canvas-scroll"
+      ref="scrollRef"
+      @mousedown="onScrollMouseDown"
+      @contextmenu="onCanvasContextMenu"
+    >
       <div
         class="canvas-wrapper"
         :style="{
@@ -158,7 +308,11 @@ function onClickOutsideWorkspace(e: MouseEvent): void {
           <div class="canvas-inner" :style="{ position: 'absolute', inset: 0 }"></div>
 
           <template v-for="el in cms.state.elements" :key="el.id">
-            <CanvasElement v-if="!el.parentId && cms.isEffectivelyVisible(el.id)" :element="el" />
+            <CanvasElement
+              v-if="!el.parentId && cms.isEffectivelyVisible(el.id)"
+              :element="el"
+              @contextmenu="openContextMenu"
+            />
           </template>
 
           <Guides />
@@ -177,5 +331,13 @@ function onClickOutsideWorkspace(e: MouseEvent): void {
 
     <!-- Marquee rendered fixed over entire viewport -->
     <div v-if="marquee" class="canvas-marquee-fixed" :style="marqueeStyle" />
+    <CanvasContextMenu
+      v-if="contextMenu && contextItems.length"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="contextItems"
+      @action="runContextAction"
+      @close="contextMenu = null"
+    />
   </div>
 </template>
