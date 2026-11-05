@@ -169,7 +169,7 @@ function findTopFrameId(startId: string): string | null {
 }
 
 function onMouseDown(e: MouseEvent): void {
-  if (cms.state.preview) return
+  if (cms.state.preview || e.button !== 0) return
   e.stopPropagation()
   if (props.element.locked) {
     cms.select(props.element.id)
@@ -211,7 +211,7 @@ function onMouseDown(e: MouseEvent): void {
 }
 
 function onLabelMouseDown(e: MouseEvent): void {
-  if (cms.state.preview || props.element.locked) return
+  if (cms.state.preview || e.button !== 0 || props.element.locked) return
   e.stopPropagation()
   cms.select(props.element.id)
   // Label is an explicit drag handle — start dragging immediately

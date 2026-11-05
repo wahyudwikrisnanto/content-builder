@@ -7,6 +7,12 @@ import { resolveVisibleSections, resolveSectionLabel } from '../composables/conf
 import { CmsFactories } from '../composables/factories'
 import Icon from '../icons/Icon.vue'
 import DragItem from './DragItem.vue'
+import CanvasContextMenu from './CanvasContextMenu.vue'
+import type { ContextMenuItem } from './CanvasContextMenu.vue'
+import {
+  buildElementContextItems,
+  runElementContextAction,
+} from '../composables/useElementContextMenu'
 import type {
   BuilderVariable,
   CmsElement,
@@ -98,6 +104,7 @@ interface LayerNode {
 
 const collapsedIds = ref<string[]>([])
 const selectionAnchor = ref<string | null>(null)
+const contextMenu = ref<{ x: number; y: number; targetId: string } | null>(null)
 
 const layerTree = computed<LayerNode[]>(() => {
   const els = cms.state.elements
@@ -152,6 +159,23 @@ function onLayerClick(e: MouseEvent, id: string): void {
     cms.select(id)
   }
   selectionAnchor.value = id
+}
+
+const contextItems = computed<ContextMenuItem[]>(() => {
+  const targetId = contextMenu.value?.targetId
+  return targetId ? buildElementContextItems(cms, targetId) : []
+})
+
+function onLayerContextMenu(e: MouseEvent, id: string): void {
+  const selected = cms.state.selectedId === id || cms.state.selectedIds.includes(id)
+  if (!selected) cms.select(id)
+  contextMenu.value = { x: e.clientX, y: e.clientY, targetId: id }
+}
+
+function runContextAction(action: string): void {
+  const targetId = contextMenu.value?.targetId
+  if (targetId) runElementContextAction(cms, action, targetId)
+  contextMenu.value = null
 }
 
 function layerName(el: CmsElement): string {
@@ -424,6 +448,7 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
             :style="{ paddingLeft: 10 + node.depth * 14 + 'px' }"
             draggable="true"
             @click="onLayerClick($event, node.el.id)"
+            @contextmenu.prevent="onLayerContextMenu($event, node.el.id)"
             @dragstart="onLayerDragStart($event, node.el.id)"
             @dragover="onLayerDragOver($event, node.el.id, node.el.type === 'frame')"
             @dragleave="dropOver = null"
@@ -505,5 +530,13 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
         </button>
       </div>
     </div>
+    <CanvasContextMenu
+      v-if="contextMenu && contextItems.length"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="contextItems"
+      @action="runContextAction"
+      @close="contextMenu = null"
+    />
   </div>
 </template>
