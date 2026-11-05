@@ -7,7 +7,14 @@ import { resolveVisibleSections, resolveSectionLabel } from '../composables/conf
 import { CmsFactories } from '../composables/factories'
 import Icon from '../icons/Icon.vue'
 import DragItem from './DragItem.vue'
-import type { CmsElement, ElementType, FactoryKey, SidebarTab, SidebarSection } from '../types'
+import type {
+  BuilderVariable,
+  CmsElement,
+  ElementType,
+  FactoryKey,
+  SidebarTab,
+  SidebarSection,
+} from '../types'
 
 const cms = useCms()
 const config = useBuilderConfig()
@@ -21,6 +28,7 @@ const SECTION_ICONS: Record<SidebarSection, string> = {
   elements: 'plus',
   layers: 'layers',
   textStyles: 'type',
+  variables: 'braces',
 }
 
 const visibleTabs = computed<Tab[]>(() =>
@@ -203,6 +211,27 @@ function onLayerDragEnd(): void {
 
 function addPreset(key: FactoryKey): void {
   cms.addElement(CmsFactories[key](cms.state.canvasWidth / 2 - 120, 80 + Math.random() * 100))
+}
+
+const selectedTextElement = computed(() => {
+  const selected = cms.state.selectedId
+    ? cms.state.elements.find((element) => element.id === cms.state.selectedId)
+    : undefined
+  return selected?.type === 'text' ? selected : undefined
+})
+
+function insertVariable(variable: BuilderVariable): void {
+  const text = `{{${variable.value}}}`
+  if (selectedTextElement.value) {
+    cms.updateElement(selectedTextElement.value.id, {
+      content: `${selectedTextElement.value.content}${text}`,
+    })
+    return
+  }
+
+  const element = CmsFactories.text(cms.state.canvasWidth / 2 - 120, 80 + Math.random() * 100)
+  element.content = text
+  cms.addElement(element)
 }
 
 const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
@@ -455,6 +484,25 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
           <span :style="{ ...p.style, color: presetColor(p.style) }">{{ p.label }}</span>
           <span class="text-style-desc">{{ p.desc }}</span>
         </div>
+      </div>
+
+      <div v-else-if="cms.state.sidebarTab === 'variables'">
+        <div v-if="!config.variables?.length" class="empty-panel">
+          <Icon name="braces" :size="28" :style="{ opacity: 0.3 }" />
+          <p>No variables configured</p>
+        </div>
+        <button
+          v-for="variable in config.variables"
+          v-else
+          :key="variable.value"
+          class="variable-card"
+          :disabled="!!selectedTextElement && selectedTextElement.locked"
+          @click="insertVariable(variable)"
+        >
+          <span class="variable-card-name">{{ variable.name }}</span>
+          <span class="text-style-desc">{{ variable.desc }}</span>
+          <span class="variable-card-value">{{ `\{\{${variable.value}\}\}` }}</span>
+        </button>
       </div>
     </div>
   </div>

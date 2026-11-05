@@ -505,6 +505,39 @@
   color: var(--cb-text-3);
 }
 
+.cb-root .variable-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border: 1px solid var(--cb-border);
+  border-radius: var(--cb-r);
+  background: transparent;
+  color: var(--cb-text-1);
+  text-align: left;
+  cursor: pointer;
+}
+.cb-root .variable-card:hover:not(:disabled) {
+  border-color: var(--cb-text-3);
+  background: var(--cb-bg-hover);
+}
+.cb-root .variable-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.cb-root .variable-card-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cb-root .variable-card-value {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--cb-text-3);
+}
+
 .cb-root .empty-panel {
   display: flex;
   flex-direction: column;
@@ -840,7 +873,7 @@
   color: var(--cb-text-2);
   width: 56px;
   flex-shrink: 0;
-  white-space: nowrap;
+  white-space: wrap;
 }
 .cb-root .prop-row-pair .prop-label {
   width: 20px;
@@ -869,6 +902,11 @@
 }
 .cb-root .prop-input:focus {
   border-color: var(--cb-selection);
+}
+.cb-root .prop-input:disabled {
+  color: var(--cb-text-3);
+  background: var(--cb-bg);
+  cursor: not-allowed;
 }
 .cb-root .prop-select {
   flex: 1;

@@ -1,6 +1,6 @@
 import type { CanvasPreset, SidebarSection, SidebarConfig } from '../types'
 
-const ALL_SECTIONS: SidebarSection[] = ['elements', 'layers', 'textStyles']
+const ALL_SECTIONS: SidebarSection[] = ['elements', 'layers', 'textStyles', 'variables']
 
 export function resolveDefaultPreset(presets?: CanvasPreset[]): CanvasPreset | null {
   if (!presets?.length) return null
@@ -18,6 +18,7 @@ export function resolveSectionLabel(id: SidebarSection, sidebar?: SidebarConfig)
     elements: 'Elements',
     layers: 'Layers',
     textStyles: 'Styles',
+    variables: 'Variables',
   }
   return sidebar?.sectionOptions?.[id]?.label ?? DEFAULT_LABELS[id]
 }

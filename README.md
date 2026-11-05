@@ -27,6 +27,7 @@ Drag any combination of elements onto a resizable canvas:
 ## Features
 
 - **Drag & drop canvas** — freely position and resize every element
+- **Variables sidebar** — insert `{{value}}` placeholders into text elements
 - **Properties panel** — live controls for font, color, border, spacing, and more
 - **Snap guides** — alignment guides for precision layout
 - **Undo / Redo** — 49-step history, nothing is lost

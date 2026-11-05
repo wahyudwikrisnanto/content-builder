@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useCms } from '../composables/useCms'
+import { useBuilderConfig } from '../composables/useBuilderConfig'
 import { usePlugins, findDialogPlugins } from '../composables/usePlugins'
 import Icon from '../icons/Icon.vue'
 import ColorInput from './ColorInput.vue'
@@ -19,6 +20,9 @@ import type {
 const cms = useCms()
 const sel = cms.selected
 const plugins = usePlugins()
+const config = useBuilderConfig()
+const isWidthLocked = computed(() => !!config.disableWidth)
+const isHeightLocked = computed(() => !!config.disableHeight)
 const dialogPlugins = computed(() => (sel.value ? findDialogPlugins(plugins, sel.value) : []))
 
 async function runDialogPlugin(idx: number): Promise<void> {
@@ -340,6 +344,7 @@ const headerLabel = computed(() => {
           type="number"
           :value="cw"
           :min="100"
+          :disabled="isWidthLocked"
           @input="cw = targetNumber($event)"
           @blur="applyCanvas"
           @keydown.enter="applyCanvas"
@@ -352,7 +357,7 @@ const headerLabel = computed(() => {
           type="number"
           :value="ch"
           :min="100"
-          :disabled="cms.state.flexibleHeight"
+          :disabled="isHeightLocked || cms.state.flexibleHeight"
           @input="ch = targetNumber($event)"
           @blur="applyCanvas"
           @keydown.enter="applyCanvas"

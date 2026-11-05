@@ -64,6 +64,7 @@ const ICONS: Record<string, string> = {
   'align-top-edge':      'lucide:align-start-vertical',
   'align-center-v':      'lucide:align-center-vertical',
   'align-bottom-edge':   'lucide:align-end-vertical',
+  'braces':              'lucide:braces',
 }
 
 const icon = computed(() =>

@@ -86,6 +86,7 @@ const HANDLES: Handle[] = [
   { id: 'w', css: { top: '50%', left: '-5px', marginTop: '-5px', cursor: 'ew-resize' } },
 ]
 
+
 function start(e: MouseEvent, hid: HandleId): void {
   e.stopPropagation()
   e.preventDefault()

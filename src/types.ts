@@ -23,7 +23,7 @@ export type InputType =
   | 'checkbox'
   | 'radio'
 export type ShapeType = 'rect' | 'circle' | 'line'
-export type SidebarTab = 'elements' | 'layers' | 'textStyles'
+export type SidebarTab = 'elements' | 'layers' | 'textStyles' | 'variables'
 export type TextAlign = 'left' | 'center' | 'right' | 'justify'
 export type ListType = 'none' | 'bullet' | 'number'
 export type FontWeight = '300' | '400' | '500' | '600' | '700'
@@ -175,7 +175,7 @@ export interface CanvasPreset {
   default?: boolean
 }
 
-export type SidebarSection = 'elements' | 'layers' | 'textStyles'
+export type SidebarSection = 'elements' | 'layers' | 'textStyles' | 'variables'
 
 export interface SidebarConfig {
   /**
@@ -190,7 +190,15 @@ export interface SidebarConfig {
 
 export type CanvasHeightMode = 'flexible' | 'fixed'
 
+export interface BuilderVariable {
+  value: string
+  name: string
+  desc: string
+}
+
 export interface BuilderConfig {
+  /** Variables available from the sidebar. */
+  variables?: BuilderVariable[]
   /**
    * Canvas size presets for the toolbar dropdown.
    * - Omitted / empty → built-in presets.
@@ -204,4 +212,8 @@ export interface BuilderConfig {
   canvasHeightMode?: CanvasHeightMode
   /** Show the "Scale content to fit" toggle in the preset dropdown. Default: true. */
   showScaleToggle?: boolean
+  /** Disable width editing (Properties panel input + canvas resize handles). */
+  disableWidth?: boolean
+  /** Disable height editing (Properties panel input + canvas resize handles). */
+  disableHeight?: boolean
 }

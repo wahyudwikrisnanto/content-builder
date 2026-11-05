@@ -112,15 +112,19 @@ const imageActivator: ActivatorPlugin = {
 const plugins: CmsPlugin[] = [imageActivator]
 
 const config: BuilderConfig = {
-  // Two canvas sizes — first is default on mount
+  // Two canvas sizes — first is default on mount]
+  disableWidth: true,
   canvasSizes: [
     { label: 'Desktop', w: 1200, h: 900, default: true },
     { label: 'Mobile', w: 375, h: 812 },
     { label: 'Email', w: 600, h: 800 },
   ],
-  // Show only Elements and Layers tabs, rename Layers → "Structure"
+  variables: [
+    { value: 'customer_name', name: 'Customer name', desc: 'The recipient name' },
+  ],
+  // Show Elements, Layers, and Variables tabs; rename Layers → "Structure"
   sidebar: {
-    sections: ['elements', 'layers'],
+    sections: ['elements', 'layers', 'variables'],
     sectionOptions: {
       layers: { label: 'Structure' },
     },
