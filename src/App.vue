@@ -122,6 +122,10 @@ const config: BuilderConfig = {
   variables: [
     { value: 'customer_name', name: 'Customer name', desc: 'The recipient name' },
   ],
+  dataAttributeSuggestions: [
+    'redirect',
+    'ads'
+  ],
   // Show Elements, Layers, and Variables tabs; rename Layers → "Structure"
   sidebar: {
     sections: ['elements', 'layers', 'variables'],

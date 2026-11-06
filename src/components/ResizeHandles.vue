@@ -5,6 +5,7 @@ import { useCms } from '../composables/useCms'
 import { cloneEl } from '../composables/factories'
 import { computeSnap, translateGuides } from '../composables/snapping'
 import { modKeys } from '../composables/useModifierKeys'
+import { fullscreenPortalRoot } from '../composables/fullscreenPortal'
 import type { CmsElement } from '../types'
 
 const props = defineProps<{ element: CmsElement }>()
@@ -37,6 +38,8 @@ watch(
     props.element.width,
     props.element.height,
     viewportTick.value,
+    cms.state.sidebarHidden,
+    cms.state.propertiesHidden,
   ],
   async () => {
     await nextTick()
@@ -196,7 +199,7 @@ function start(e: MouseEvent, hid: HandleId): void {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport :to="fullscreenPortalRoot || 'body'">
     <div :style="wrapperStyle" class="cb-root-var cb-resize-handles-wrapper">
       <div
         v-for="h in HANDLES"

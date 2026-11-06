@@ -164,7 +164,10 @@ export interface CmsState {
   flexibleHeight: boolean
   preview: boolean
   previewFullscreen: boolean
+  previewResponsive: boolean
+  previewZoom: number
   sidebarHidden: boolean
+  propertiesHidden: boolean
 }
 
 export interface CanvasPreset {
@@ -212,7 +215,9 @@ export interface BuilderConfig {
   canvasHeightMode?: CanvasHeightMode
   /** Show the "Scale content to fit" toggle in the preset dropdown. Default: true. */
   showScaleToggle?: boolean
-  /** Disable width editing (Properties panel input + canvas resize handles). */
+  /** Suggested data-* attribute names shown in the Properties dropdown. */
+  dataAttributeSuggestions?: string[]
+  /** Disable width editing (canvas size input only). */
   disableWidth?: boolean
   /** Disable height editing (Properties panel input + canvas resize handles). */
   disableHeight?: boolean

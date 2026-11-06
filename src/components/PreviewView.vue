@@ -1,12 +1,25 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import 'highlight.js/styles/atom-one-dark.css'
 import { useCms } from '../composables/useCms'
 import { renderHtml, renderFlowHtml } from '../composables/renderHtml'
-import Icon from '../icons/Icon.vue'
 
 const cms = useCms()
-const responsive = ref(false)
+const scrollRef = ref<HTMLElement | null>(null)
+
+function onWheel(e: WheelEvent): void {
+  if (!e.ctrlKey && !e.metaKey) return
+  e.preventDefault()
+  cms.setPreviewZoom(e.deltaY > 0 ? -0.1 : 0.1)
+}
+
+onMounted(() => {
+  // passive:false required to call preventDefault on wheel
+  scrollRef.value?.addEventListener('wheel', onWheel, { passive: false })
+})
+onUnmounted(() => {
+  scrollRef.value?.removeEventListener('wheel', onWheel)
+})
 
 const payload = computed(() => ({
   canvas: {
@@ -18,35 +31,17 @@ const payload = computed(() => ({
 }))
 
 const html = computed(() =>
-  responsive.value ? renderFlowHtml(payload.value) : renderHtml(payload.value),
+  cms.state.previewResponsive ? renderFlowHtml(payload.value) : renderHtml(payload.value),
 )
 </script>
 
 <template>
-  <div :class="['preview-view', { fullscreen: cms.state.previewFullscreen }]">
-    <div class="preview-toolbar">
-      <button
-        :class="['icon-btn', { 'icon-btn-active': responsive }]"
-        title="Toggle responsive (flow) layout"
-        @click="responsive = !responsive"
-      >
-        <Icon name="responsive" :size="17" />
-      </button>
-      <button
-        class="icon-btn"
-        @click="cms.togglePreviewFullscreen()"
-        :title="cms.state.previewFullscreen ? 'Exit fullscreen' : 'Fullscreen preview'"
-      >
-        <Icon :name="cms.state.previewFullscreen ? 'minimize' : 'maximize'" :size="17" />
-      </button>
-      <button class="icon-btn" @click="cms.togglePreview()" title="Exit preview (Esc)">
-        <Icon name="eye-off" :size="17" />
-      </button>
-    </div>
-    <div class="preview-scroll">
+  <div class="preview-view">
+    <div ref="scrollRef" class="preview-scroll">
       <div
         class="preview-stage"
-        :class="{ 'preview-stage--flow': responsive }"
+        :class="{ 'preview-stage--flow': cms.state.previewResponsive }"
+        :style="{ transform: `scale(${cms.state.previewZoom})`, transformOrigin: 'top center' }"
         v-html="html"
       ></div>
     </div>
@@ -62,25 +57,6 @@ const html = computed(() =>
   overflow: hidden;
   position: relative;
 }
-.preview-view.fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: #fff;
-}
-.preview-toolbar {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 4px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 4px;
-  box-shadow: var(--shadow);
-  z-index: 10;
-}
 .preview-scroll {
   flex: 1;
   overflow: auto;
@@ -95,12 +71,6 @@ const html = computed(() =>
 .preview-stage--flow {
   width: 100%;
   max-width: 100%;
-  box-shadow: none;
-}
-.preview-view.fullscreen .preview-scroll {
-  padding: 0;
-}
-.preview-view.fullscreen .preview-stage {
   box-shadow: none;
 }
 </style>

@@ -53,6 +53,7 @@ const contextItems = computed<ContextMenuItem[]>(() => {
   )
   const siblingIndex = siblings.findIndex((el) => el.id === target.id)
   return [
+    { id: 'rename', label: 'Rename', disabled: multi || target.locked },
     { id: 'duplicate', label: 'Duplicate', shortcut: 'Ctrl D', disabled: multi || target.locked },
     ...(target.type === 'frame' && !multi
       ? [{ id: 'ungroup', label: 'Ungroup', disabled: target.locked }]
@@ -244,7 +245,13 @@ function runContextAction(id: string): void {
     return
   }
   const multi = cms.state.selectedIds.length > 1
-  if (id === 'duplicate') cms.duplicate(targetId)
+  if (id === 'rename') {
+    const target = cms.state.elements.find((el) => el.id === targetId)
+    if (target && !target.locked) {
+      const nextName = window.prompt('Layer name', target.name ?? '')
+      if (nextName !== null) cms.updateElement(targetId, { name: nextName.trim() || undefined })
+    }
+  } else if (id === 'duplicate') cms.duplicate(targetId)
   else if (id === 'group') cms.groupSelection()
   else if (id === 'ungroup') cms.ungroupFrame(targetId)
   else if (id === 'bring-forward') cms.bringForward(targetId)

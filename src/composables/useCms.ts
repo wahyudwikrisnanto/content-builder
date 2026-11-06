@@ -25,7 +25,10 @@ const state = reactive<CmsState>({
   flexibleHeight: false,
   preview: false,
   previewFullscreen: false,
+  previewResponsive: false,
+  previewZoom: 1,
   sidebarHidden: false,
+  propertiesHidden: false,
 })
 
 function snapshot(): void {
@@ -475,6 +478,9 @@ const actions = {
   },
   toggleSidebar(): void {
     state.sidebarHidden = !state.sidebarHidden
+  },
+  toggleProperties(): void {
+    state.propertiesHidden = !state.propertiesHidden
   },
   move(id: string, x: number, y: number, opts: { skipParentClamp?: boolean } = {}): void {
     const i = findIdx(id)
@@ -1029,6 +1035,12 @@ const actions = {
   },
   togglePreviewFullscreen(): void {
     state.previewFullscreen = !state.previewFullscreen
+  },
+  togglePreviewResponsive(): void {
+    state.previewResponsive = !state.previewResponsive
+  },
+  setPreviewZoom(delta: number): void {
+    state.previewZoom = Math.min(3, Math.max(0.25, Math.round((state.previewZoom + delta) * 100) / 100))
   },
   exportJson(): string {
     const payload = {

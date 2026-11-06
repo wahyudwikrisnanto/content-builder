@@ -52,6 +52,7 @@ const ICONS: Record<string, string> = {
   'flex-height':         'lucide:arrow-up-down',
   'move':                'lucide:move',
   'sidebar-left':        'lucide:panel-left',
+  'sidebar-right':       'lucide:panel-right',
   'responsive':          'lucide:monitor',
   'input':               'lucide:text-cursor-input',
   'input-textarea':      'lucide:text-cursor-input',

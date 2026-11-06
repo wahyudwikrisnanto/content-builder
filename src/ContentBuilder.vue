@@ -15,6 +15,7 @@ import Properties from './components/Properties.vue'
 import PreviewView from './components/PreviewView.vue'
 import type { CmsPlugin } from './composables/usePlugins'
 import type { BuilderConfig } from './types'
+import { fullscreenPortalRoot } from './composables/fullscreenPortal'
 
 // NOTE: useCms() is a module-level singleton — safe for single-instance use.
 // When packaging for multi-instance support, move state into provide/inject per component tree.
@@ -78,6 +79,7 @@ function exitOwnedFullscreen(): void {
 
 // Load initial content once on mount
 onMounted(() => {
+  fullscreenPortalRoot.value = rootRef.value
   // Apply canvas height mode from config before loading content
   if (props.config?.canvasHeightMode === 'flexible') cms.state.flexibleHeight = true
   else if (props.config?.canvasHeightMode === 'fixed') cms.state.flexibleHeight = false
@@ -173,12 +175,13 @@ function onKey(e: KeyboardEvent): void {
     }
   }
   if (e.key === 'Escape') {
-    if (cms.state.previewFullscreen) cms.togglePreviewFullscreen()
-    else if (cms.state.preview) cms.togglePreview()
-    else if (cms.state.fullscreen) {
-      if (!document.fullscreenElement) cms.toggleFullscreen()
+    if (cms.state.fullscreen) {
+      if (document.fullscreenElement) void document.exitFullscreen()
+      else cms.toggleFullscreen()
       return
-    } else {
+    }
+    if (cms.state.preview) cms.togglePreview()
+    else {
       cms.select(null)
       cms.state.allSelected = false
       cms.state.selectedIds = []
@@ -202,10 +205,7 @@ function onKey(e: KeyboardEvent): void {
     ref="rootRef"
     :class="['cb-root cb-root-var', { fullscreen: cms.state.fullscreen, preview: cms.state.preview }]"
   >
-    <Toolbar
-      v-if="!cms.state.preview || !cms.state.previewFullscreen"
-      @toggle-fullscreen="toggleFullscreen"
-    />
+    <Toolbar @toggle-fullscreen="toggleFullscreen" />
     <div class="main-area">
       <template v-if="cms.state.preview">
         <PreviewView />
@@ -213,7 +213,7 @@ function onKey(e: KeyboardEvent): void {
       <template v-else>
         <Sidebar v-if="!cms.state.sidebarHidden" />
         <Canvas />
-        <Properties />
+        <Properties v-if="!cms.state.propertiesHidden" />
       </template>
     </div>
   </div>

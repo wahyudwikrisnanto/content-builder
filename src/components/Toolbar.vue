@@ -125,84 +125,132 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
 
     <div class="toolbar-divider"></div>
 
-    <div class="canvas-size-selector" ref="dropRef">
-      <button
-        class="canvas-size-btn"
-        :disabled="singlePreset"
-        @click="!singlePreset && (showPresets = !showPresets)"
-      >
-        <span>{{ cms.state.canvasWidth }} × {{ cms.state.canvasHeight }}</span>
-        <Icon v-if="!singlePreset" name="chevron-down" :size="14" />
-      </button>
-      <div v-if="showPresets && !singlePreset" class="canvas-size-dropdown">
-        <div class="dropdown-label">Canvas presets</div>
+    <template v-if="cms.state.preview">
+      <div class="toolbar-group">
         <button
-          v-for="p in presets"
-          :key="p.label"
-          class="canvas-size-option"
-          @click="applyPreset(p)"
+          :class="['icon-btn', { 'icon-btn-active': cms.state.previewResponsive }]"
+          title="Toggle responsive (flow) layout"
+          @click="cms.togglePreviewResponsive()"
         >
-          <span>{{ p.label }}</span>
-          <span class="dims">{{ p.w }}×{{ p.h }}</span>
+          <Icon name="responsive" :size="17" />
         </button>
-        <template v-if="showScaleToggle">
-          <div class="dropdown-divider"></div>
-          <label class="dropdown-toggle-row" @mousedown.prevent>
-            <input type="checkbox" v-model="scaleOnPreset" />
-            <span>Scale content to fit</span>
-          </label>
-        </template>
       </div>
-    </div>
 
-    <div class="toolbar-spacer"></div>
+      <div class="toolbar-spacer"></div>
 
-    <div class="toolbar-group">
-      <button class="icon-btn" @click="cms.setZoom(cms.state.zoom - 0.1)" title="Zoom Out">
-        <Icon name="minus" :size="16" />
-      </button>
-      <span class="zoom-label">{{ Math.round(cms.state.zoom * 100) }}%</span>
-      <button class="icon-btn" @click="cms.setZoom(cms.state.zoom + 0.1)" title="Zoom In">
-        <Icon name="plus" :size="16" />
-      </button>
-    </div>
+      <div class="toolbar-group">
+        <button class="icon-btn" title="Zoom out" @click="cms.setPreviewZoom(-0.1)">
+          <Icon name="minus" :size="16" />
+        </button>
+        <span class="zoom-label">{{ Math.round(cms.state.previewZoom * 100) }}%</span>
+        <button class="icon-btn" title="Zoom in" @click="cms.setPreviewZoom(0.1)">
+          <Icon name="plus" :size="16" />
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="toolbar-group">
+        <button
+          :class="['icon-btn', { 'icon-btn-active': cms.state.fullscreen }]"
+          @click="emit('toggleFullscreen')"
+          :title="cms.state.fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen preview'"
+        >
+          <Icon :name="cms.state.fullscreen ? 'minimize' : 'maximize'" :size="17" />
+        </button>
+        <button class="icon-btn" @click="cms.togglePreview()" title="Exit preview (Esc)">
+          <Icon name="eye-off" :size="17" />
+        </button>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="canvas-size-selector" ref="dropRef">
+        <button
+          class="canvas-size-btn"
+          :disabled="singlePreset"
+          @click="!singlePreset && (showPresets = !showPresets)"
+        >
+          <span>{{ cms.state.canvasWidth }} × {{ cms.state.canvasHeight }}</span>
+          <Icon v-if="!singlePreset" name="chevron-down" :size="14" />
+        </button>
+        <div v-if="showPresets && !singlePreset" class="canvas-size-dropdown">
+          <div class="dropdown-label">Canvas presets</div>
+          <button
+            v-for="p in presets"
+            :key="p.label"
+            class="canvas-size-option"
+            @click="applyPreset(p)"
+          >
+            <span>{{ p.label }}</span>
+            <span class="dims">{{ p.w }}×{{ p.h }}</span>
+          </button>
+          <template v-if="showScaleToggle">
+            <div class="dropdown-divider"></div>
+            <label class="dropdown-toggle-row" @mousedown.prevent>
+              <input type="checkbox" v-model="scaleOnPreset" />
+              <span>Scale content to fit</span>
+            </label>
+          </template>
+        </div>
+      </div>
+
+      <div class="toolbar-spacer"></div>
+
+      <div class="toolbar-group">
+        <button class="icon-btn" @click="cms.setZoom(cms.state.zoom - 0.1)" title="Zoom Out">
+          <Icon name="minus" :size="16" />
+        </button>
+        <span class="zoom-label">{{ Math.round(cms.state.zoom * 100) }}%</span>
+        <button class="icon-btn" @click="cms.setZoom(cms.state.zoom + 0.1)" title="Zoom In">
+          <Icon name="plus" :size="16" />
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="toolbar-group">
+        <button
+          :class="['icon-btn', { 'icon-btn-active': cms.state.sidebarHidden }]"
+          @click="cms.toggleSidebar()"
+          title="Toggle sidebar"
+        >
+          <Icon name="sidebar-left" :size="17" />
+        </button>
+        <button
+          :class="['icon-btn', { 'icon-btn-active': cms.state.propertiesHidden }]"
+          @click="cms.toggleProperties()"
+          title="Toggle properties panel"
+        >
+          <Icon name="sidebar-right" :size="17" />
+        </button>
+        <button
+          :class="['icon-btn', { 'icon-btn-active': cms.state.preview }]"
+          @click="cms.togglePreview()"
+          :title="cms.state.preview ? 'Exit preview (Esc)' : 'Preview mode'"
+        >
+          <Icon name="eye" :size="17" />
+        </button>
+        <button
+          :class="['icon-btn', { 'icon-btn-active': cms.state.flexibleHeight }]"
+          @click="cms.toggleFlexibleHeight()"
+          :title="cms.state.flexibleHeight ? 'Fixed height' : 'Flexible height'"
+        >
+          <Icon name="flex-height" :size="17" />
+        </button>
+        <button
+          :class="['icon-btn', { 'icon-btn-active': cms.state.fullscreen }]"
+          @click="emit('toggleFullscreen')"
+          :title="cms.state.fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen window'"
+        >
+          <Icon :name="cms.state.fullscreen ? 'minimize' : 'maximize'" :size="17" />
+        </button>
+      </div>
+    </template>
 
     <div class="toolbar-divider"></div>
 
-    <div class="toolbar-group">
-      <button
-        :class="['icon-btn', { 'icon-btn-active': cms.state.sidebarHidden }]"
-        @click="cms.toggleSidebar()"
-        title="Toggle sidebar"
-      >
-        <Icon name="sidebar-left" :size="17" />
-      </button>
-      <button
-        :class="['icon-btn', { 'icon-btn-active': cms.state.preview }]"
-        @click="cms.togglePreview()"
-        :title="cms.state.preview ? 'Exit preview (Esc)' : 'Preview mode'"
-      >
-        <Icon name="eye" :size="17" />
-      </button>
-      <button
-        :class="['icon-btn', { 'icon-btn-active': cms.state.flexibleHeight }]"
-        @click="cms.toggleFlexibleHeight()"
-        :title="cms.state.flexibleHeight ? 'Fixed height' : 'Flexible height'"
-      >
-        <Icon name="flex-height" :size="17" />
-      </button>
-      <button
-        :class="['icon-btn', { 'icon-btn-active': cms.state.fullscreen }]"
-        @click="emit('toggleFullscreen')"
-        :title="cms.state.fullscreen ? 'Exit fullscreen (Esc)' : 'Fullscreen window'"
-      >
-        <Icon :name="cms.state.fullscreen ? 'minimize' : 'maximize'" :size="17" />
-      </button>
-    </div>
-
-    <div class="toolbar-divider"></div>
-
-    <div class="toolbar-group">
+    <div v-if="!cms.state.preview" class="toolbar-group">
       <div class="fmt-menu" ref="importDropRef">
         <button
           class="icon-btn"

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 
-const props = defineProps<{ modelValue: string; options: string[]; placeholder?: string }>()
+const props = defineProps<{
+  modelValue: string
+  options: string[]
+  placeholder?: string
+  allowCustom?: boolean
+  customFirst?: boolean
+}>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>()
 
 const open = ref(false)
@@ -10,7 +16,11 @@ const rootRef = ref<HTMLDivElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 const activeIdx = ref(0)
 
-const sorted = computed(() => [...props.options].sort((a, b) => a.localeCompare(b)))
+const sorted = computed(() =>
+  props.customFirst
+    ? [...props.options]
+    : [...props.options].sort((a, b) => a.localeCompare(b)),
+)
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return sorted.value
@@ -54,6 +64,7 @@ function onKey(e: KeyboardEvent): void {
     e.preventDefault()
     const v = filtered.value[activeIdx.value]
     if (v) pick(v)
+    else if (props.allowCustom && query.value.trim()) pick(query.value.trim())
   } else if (e.key === 'Escape') {
     open.value = false
     query.value = ''
@@ -89,7 +100,14 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
         >
           {{ opt }}
         </div>
-        <div v-if="!filtered.length" class="ss-empty">No matches</div>
+        <div v-if="!filtered.length && !allowCustom" class="ss-empty">No matches</div>
+        <div
+          v-else-if="!filtered.length && allowCustom && query.trim()"
+          class="ss-opt active"
+          @mousedown.prevent="pick(query.trim())"
+        >
+          Use “{{ query.trim() }}”
+        </div>
       </div>
     </div>
   </div>

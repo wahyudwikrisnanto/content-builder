@@ -178,6 +178,20 @@ function runContextAction(action: string): void {
   contextMenu.value = null
 }
 
+const renamingId = ref<string | null>(null)
+
+function startRename(e: MouseEvent, el: CmsElement): void {
+  if (el.locked) return
+  e.stopPropagation()
+  renamingId.value = el.id
+}
+
+function commitRename(el: CmsElement, value: string): void {
+  renamingId.value = null
+  const trimmed = value.trim()
+  if (trimmed !== (el.name ?? '')) cms.updateElement(el.id, { name: trimmed || undefined })
+}
+
 function layerName(el: CmsElement): string {
   // Explicit user name wins for every element type
   if (el.name) return el.name
@@ -241,7 +255,7 @@ const selectedTextElement = computed(() => {
   const selected = cms.state.selectedId
     ? cms.state.elements.find((element) => element.id === cms.state.selectedId)
     : undefined
-  return selected?.type === 'text' ? selected : undefined
+  return selected?.type === 'text' || selected?.type === 'button' ? selected : undefined
 })
 
 function insertVariable(variable: BuilderVariable): void {
@@ -474,9 +488,21 @@ const presetColor = (s: CSSProperties): string => (s.color as string) || '#222'
             >
               <Icon :name="TYPE_ICON[node.el.type]" :size="14" />
             </span>
+            <input
+              v-if="renamingId === node.el.id"
+              class="layer-item-name layer-item-name-input"
+              :value="node.el.name ?? layerName(node.el)"
+              autofocus
+              @click.stop
+              @keydown.enter.prevent="commitRename(node.el, ($event.target as HTMLInputElement).value)"
+              @keydown.escape="renamingId = null"
+              @blur="commitRename(node.el, ($event.target as HTMLInputElement).value)"
+            />
             <span
+              v-else
               class="layer-item-name"
               :style="{ opacity: cms.isEffectivelyVisible(node.el.id) ? 1 : 0.4 }"
+              @dblclick="startRename($event, node.el)"
               >{{ layerName(node.el) }}</span
             >
             <div class="layer-item-actions">

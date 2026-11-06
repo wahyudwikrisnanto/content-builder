@@ -399,8 +399,10 @@ export function renderHtml(payload: RenderPayload): string {
     return true
   }
 
+  // Preserve `els` array order (== canvas stacking order, same order bringForward/sendBackward
+  // mutate) — sorting by position here would render overlapping elements out of z-order.
   const childrenOf = (pid: string | null): CmsRenderElement[] =>
-    els.filter((e) => (e.parentId ?? null) === pid && isVisible(e)).sort((a, b) => a.y - b.y || a.x - b.x)
+    els.filter((e) => (e.parentId ?? null) === pid && isVisible(e))
 
   const renderNode = (el: CmsRenderElement) => {
     const childrenHtml: string = childrenOf(el.id).map(renderNode).join('')

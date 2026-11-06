@@ -21,6 +21,7 @@ const cms = useCms()
 const sel = cms.selected
 const plugins = usePlugins()
 const config = useBuilderConfig()
+const dataAttributeSuggestions = computed(() => config.dataAttributeSuggestions ?? [])
 const isWidthLocked = computed(() => !!config.disableWidth)
 const isHeightLocked = computed(() => !!config.disableHeight)
 const dialogPlugins = computed(() => (sel.value ? findDialogPlugins(plugins, sel.value) : []))
@@ -130,6 +131,20 @@ const LISTS: ListOpt[] = [
 
 const cw = ref(cms.state.canvasWidth)
 const ch = ref(cms.state.canvasHeight)
+const lineHeightDraft = ref('')
+watch(
+  () => [sel.value?.id, sel.value?.styles.lineHeight] as const,
+  () => {
+    lineHeightDraft.value = sel.value?.styles.lineHeight?.toString() ?? ''
+  },
+  { immediate: true },
+)
+function commitLineHeight(id: string): void {
+  const value = Number.parseFloat(lineHeightDraft.value)
+  if (!Number.isFinite(value)) return
+  sty(id, 'lineHeight', Math.min(4, Math.max(0.8, value)))
+  lineHeightDraft.value = String(Math.min(4, Math.max(0.8, value)))
+}
 watch(
   () => cms.state.canvasWidth,
   (v) => (cw.value = v),
@@ -201,6 +216,13 @@ function dataAttrKeyError(id: string, index: number, name: string): string {
 
 function normalizeDataAttrDraft(index: number, value: string): void {
   dataAttrKeyDrafts.value[index] = normalizeDataAttributeName(value)
+}
+
+function updateDataAttrKey(index: number, value: string): void {
+  const id = sel.value?.id
+  if (!id) return
+  normalizeDataAttrDraft(index, value)
+  renameDataAttrKey(id, index, value)
 }
 
 function renameDataAttrKey(id: string, index: number, nextName: string): void {
@@ -429,16 +451,15 @@ const headerLabel = computed(() => {
         class="prop-row"
         :style="{ gap: '6px' }"
       >
-        <input
-          class="prop-input"
-          type="text"
-          :value="dataAttrKeyDrafts[i] ?? dataAttrName(key)"
-          placeholder="attribute-name"
+        <SearchableSelect
+          class="data-attr-select"
+          :model-value="dataAttrKeyDrafts[i] ?? dataAttrName(key)"
+          :options="dataAttributeSuggestions"
+          allow-custom
+          custom-first
+          placeholder="add custom attribute name"
           :title="dataAttrKeyError(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key)) || undefined"
-          :style="dataAttrKeyError(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key)) ? { borderColor: '#ef4444' } : undefined"
-          @input="normalizeDataAttrDraft(i, targetValue($event))"
-          @change="renameDataAttrKey(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key))"
-          @keydown.enter="renameDataAttrKey(sel.id, i, dataAttrKeyDrafts[i] ?? dataAttrName(key))"
+          @update:model-value="updateDataAttrKey(i, $event)"
         />
         <input
           class="prop-input"
@@ -538,13 +559,12 @@ const headerLabel = computed(() => {
       <div class="prop-section-title">Typography</div>
       <div class="prop-row">
         <span class="prop-label">Font</span>
-        <select
-          class="prop-select"
-          :value="sel.styles.fontFamily || 'inherit'"
-          @change="sty(sel.id, 'fontFamily', targetValue($event))"
-        >
-          <option v-for="f in FONT_FAMILIES" :key="f.value" :value="f.value">{{ f.label }}</option>
-        </select>
+        <SearchableSelect
+          :model-value="sel.styles.fontFamily || 'inherit'"
+          :options="FONT_FAMILIES.map((font) => font.value)"
+          placeholder="Font"
+          @update:model-value="(value) => sty(sel!.id, 'fontFamily', value)"
+        />
       </div>
       <div class="prop-row">
         <span class="prop-label">Size</span>
@@ -654,12 +674,12 @@ const headerLabel = computed(() => {
         <span class="prop-label">Line</span>
         <input
           class="prop-input"
-          type="number"
-          step="0.1"
-          :min="0.8"
-          :max="4"
-          :value="sel.styles.lineHeight"
-          @input="sty(sel.id, 'lineHeight', targetNumber($event))"
+          type="text"
+          inputmode="decimal"
+          :value="lineHeightDraft"
+          @input="lineHeightDraft = targetValue($event)"
+          @blur="commitLineHeight(sel.id)"
+          @keydown.enter="commitLineHeight(sel.id)"
         />
       </div>
     </div>
@@ -673,11 +693,11 @@ const headerLabel = computed(() => {
         <span class="prop-label"></span>
         <button
           class="btn-sm"
-          :title="padSidesExpanded ? 'Use paired H/V inputs' : 'Set each side individually'"
+          :title="padSidesExpanded ? 'Use paired Horizontal/Vertical inputs' : 'Set each side individually'"
           :style="{ marginLeft: 'auto', padding: '3px 6px' }"
           @click="padSidesExpanded = !padSidesExpanded"
         >
-          {{ padSidesExpanded ? '⧉ Sides' : '⇔ H/V' }}
+          {{ padSidesExpanded ? '⧉ Sides' : '⇔ Horizontal/Vertical' }}
         </button>
       </div>
       <template v-if="!padSidesExpanded">
@@ -1343,11 +1363,11 @@ const headerLabel = computed(() => {
           <span class="prop-label">Padding</span>
           <button
             class="btn-sm"
-            :title="padSidesExpanded ? 'Use paired H/V inputs' : 'Set each side individually'"
+            :title="padSidesExpanded ? 'Use paired Horizontal/Vertical inputs' : 'Set each side individually'"
             :style="{ marginLeft: 'auto', padding: '3px 6px' }"
             @click="padSidesExpanded = !padSidesExpanded"
           >
-            {{ padSidesExpanded ? '⧉ Sides' : '⇔ H/V' }}
+            {{ padSidesExpanded ? '⧉ Sides' : '⇔ Horizontal/Vertical' }}
           </button>
         </div>
         <template v-if="!padSidesExpanded">

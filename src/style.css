@@ -51,6 +51,7 @@
 }
 
 .cb-root .toolbar {
+  position: relative;
   height: 60px;
   background: var(--cb-bg-panel);
   border-bottom: 1px solid var(--cb-border);
@@ -474,6 +475,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.cb-root .layer-item-name-input {
+  border: 1px solid var(--cb-selection);
+  border-radius: 3px;
+  background: var(--cb-bg-panel);
+  color: var(--cb-text-1);
+  font: inherit;
+  padding: 1px 4px;
+  outline: none;
+}
 .cb-root .layer-item-actions {
   display: flex;
   gap: 1px;
@@ -852,6 +862,13 @@
   gap: 6px;
   margin-bottom: 7px;
 }
+.cb-root .data-attr-select {
+  flex: 1;
+  min-width: 0;
+}
+.cb-root .data-attr-select .ss-trigger {
+  height: 34px;
+}
 .cb-root .prop-row:last-child {
   margin-bottom: 0;
 }
@@ -874,6 +891,7 @@
   width: 56px;
   flex-shrink: 0;
   white-space: wrap;
+  word-break: break-word;
 }
 .cb-root .prop-row-pair .prop-label {
   width: 20px;

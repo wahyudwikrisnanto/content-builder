@@ -32,6 +32,7 @@ export function buildElementContextItems(cms: Cms, targetId: string): ContextMen
   )
   const siblingIndex = siblings.findIndex((el) => el.id === target.id)
   return [
+    { id: 'rename', label: 'Rename', disabled: multi || target.locked },
     { id: 'duplicate', label: 'Duplicate', shortcut: 'Ctrl D', disabled: multi || target.locked },
     ...(target.type === 'frame' && !multi
       ? [{ id: 'ungroup', label: 'Ungroup', disabled: target.locked }]
@@ -71,6 +72,13 @@ export function buildElementContextItems(cms: Cms, targetId: string): ContextMen
 export function runElementContextAction(cms: Cms, action: string, targetId: string): boolean {
   const multi = cms.state.selectedIds.length > 1
   switch (action) {
+    case 'rename': {
+      const target = cms.state.elements.find((el) => el.id === targetId)
+      if (!target || target.locked) return false
+      const nextName = window.prompt('Layer name', target.name ?? '')
+      if (nextName !== null) cms.updateElement(targetId, { name: nextName.trim() || undefined })
+      return true
+    }
     case 'duplicate':
       cms.duplicate(targetId)
       return true
