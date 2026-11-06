@@ -55,10 +55,12 @@ watch(
 
     const rect = realElement.getBoundingClientRect()
 
+    // fixed = viewport-relative, same coord space as getBoundingClientRect() — no
+    // scroll/ancestor-offset math needed, so host page margin/padding can't skew it
     wrapperStyle.value = {
-      position: 'absolute',
-      left: `${rect.left + window.scrollX}px`,
-      top: `${rect.top + window.scrollY}px`,
+      position: 'fixed',
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
       width: `${rect.width}px`,
       height: `${rect.height}px`,
       pointerEvents: 'none',
